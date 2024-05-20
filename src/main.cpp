@@ -125,10 +125,10 @@ IOpins_t pin[NO_PINS] = {
     {KD4, OUTPUT},  // open collector
     {KD8, OUTPUT},  // open collector
     {DP_LATCH, OUTPUT},
-    {DP1, OUTPUT},  // open collector
-    {DP2, OUTPUT},  // open collector
-    {DP4, OUTPUT},  // open collector
-    {DP8, OUTPUT},  // open collector
+    {DP1, INPUT},  // open collector, temp fix
+    {DP2, INPUT},  // open collector, temp fix
+    {DP4, INPUT},  // open collector, temp fix
+    {DP8, INPUT},  // open collector, temp fix
     {EXT_PROG_A, OUTPUT},
     {EXT_PROG_B, OUTPUT},
     {EXT_PROG_C, OUTPUT},
@@ -219,11 +219,6 @@ void setup() {
         i %= 16;
     }
 }
-
-// void clock(){
-//   digitalWriteFast(3, HIGH);
-//   digitalWriteFast(3, LOW);
-// }
 
 void set_opcode(uint8_t opcode) {
     // digital write fast needs a constant expression to compile
