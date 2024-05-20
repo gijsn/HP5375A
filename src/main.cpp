@@ -68,11 +68,11 @@ enum _exponents {
 #define X 10
 enum _pins {
     LOAD_E_KB = 22,
-    SQ1 = X,
-    SQ2 = X,
-    SQ4 = X,
-    SQ8 = X,
-    KB_SIGN_E = 30,
+    SQ1 = 24,
+    SQ2 = 26,
+    SQ4 = 28,
+    SQ8 = 30,
+    KB_SIGN_E = 32,
     KD1 = 23,
     KD2 = 25,
     KD4 = 27,
@@ -110,61 +110,57 @@ enum _pins {
 typedef struct {
     uint8_t number;
     uint8_t mode;
-    bool inverted_logic;
 } IOpins_t;
 
 #define NO_PINS 38
 IOpins_t pin[NO_PINS] = {
-    {LOAD_E_KB, OUTPUT, true},
-    {SQ1, OUTPUT, true},
-    {SQ2, OUTPUT, true},
-    {SQ4, OUTPUT, true},
-    {SQ8, OUTPUT, true},
-    {KB_SIGN_E, OUTPUT, false},
-    {KD1, OUTPUT, true},  // open collector
-    {KD2, OUTPUT, true},  // open collector
-    {KD4, OUTPUT, true},  // open collector
-    {KD8, OUTPUT, true},  // open collector
-    {DP_LATCH, OUTPUT, true},
-    {DP1, OUTPUT, false},  // open collector
-    {DP2, OUTPUT, true},   // open collector
-    {DP4, OUTPUT, true},   // open collector
-    {DP8, OUTPUT, false},  // open collector
-    {EXT_PROG_A, OUTPUT, true},
-    {EXT_PROG_B, OUTPUT, true},
-    {EXT_PROG_C, OUTPUT, true},
-    {EXT_PROG_D, OUTPUT, true},
-    {EXT_PROG_E, OUTPUT, true},
-    {REMOTE_AB, OUTPUT, false},
-    {EXT_START, OUTPUT, true},
-    {EXT_RESET, OUTPUT, true},
-    {EXT_SHIFT13, OUTPUT, true},
-    {EXT_STEP_COMPL, OUTPUT, false},
-    {SW_RST, OUTPUT, true},  // open collector
-    {EXT_CLK, INPUT, false},
-    {EXT_STORE, INPUT, true},
-    {PRESET_SIGNX_NEG, OUTPUT, true},
-    {EXT_S1, INPUT, false},
-    {EXT_S2, INPUT, false},
-    {EXT_S4, INPUT, false},
-    {EXT_S8, INPUT, false},
-    {SIGNX, INPUT, false},
-    {DEFEAT_HOLD, OUTPUT, true},
-    {EXT_SW, INPUT, true},
-    {
-        PI_ERROR_DEFEAT,
-    },
-    {
-        DIRTY_ZEROS,
-    }};
+    {LOAD_E_KB, OUTPUT},
+    {SQ1, OUTPUT},
+    {SQ2, OUTPUT},
+    {SQ4, OUTPUT},
+    {SQ8, OUTPUT},
+    {KB_SIGN_E, OUTPUT},
+    {KD1, OUTPUT},  // open collector
+    {KD2, OUTPUT},  // open collector
+    {KD4, OUTPUT},  // open collector
+    {KD8, OUTPUT},  // open collector
+    {DP_LATCH, OUTPUT},
+    {DP1, OUTPUT},  // open collector
+    {DP2, OUTPUT},  // open collector
+    {DP4, OUTPUT},  // open collector
+    {DP8, OUTPUT},  // open collector
+    {EXT_PROG_A, OUTPUT},
+    {EXT_PROG_B, OUTPUT},
+    {EXT_PROG_C, OUTPUT},
+    {EXT_PROG_D, OUTPUT},
+    {EXT_PROG_E, OUTPUT},
+    {REMOTE_AB, OUTPUT},
+    {EXT_START, OUTPUT},
+    {EXT_RESET, OUTPUT},
+    {EXT_SHIFT13, OUTPUT},
+    {EXT_STEP_COMPL, OUTPUT},
+    {SW_RST, OUTPUT},  // open collector
+    {EXT_CLK, INPUT},
+    {EXT_STORE, INPUT},
+    {PRESET_SIGNX_NEG, OUTPUT},
+    {EXT_S1, INPUT},
+    {EXT_S2, INPUT},
+    {EXT_S4, INPUT},
+    {EXT_S8, INPUT},
+    {SIGNX, INPUT},
+    {DEFEAT_HOLD, OUTPUT},
+    {EXT_SW, INPUT},
+    {PI_ERROR_DEFEAT, INPUT},
+    {DIRTY_ZEROS, INPUT}};
 
 // put function declarations here:
 int myFunction(int, int);
 
 void set_opcode(uint8_t opcode);
-void set_keyboard_digit(uint8_t digit);
+void set_keyboard_digit(uint8_t digit, bool sign);
 
 bool external_module_enabled();
+bool mainframe_reset();
 void step();
 
 void setup() {
@@ -184,29 +180,40 @@ void setup() {
     // attachInterrupt(digitalPinToInterrupt(EXT_CLK), clock, RISING);
     // attachInterrupt(digitalPinToInterrupt(EXT_STEP_COMPL), step_complete, RISING);
     while (true) {
+        // works
         // set_opcode(CLEAR_XYZ);
         // step();
-        // digitalWrite(LOAD_E_KB, LOW);
-        set_keyboard_digit(1);
-        set_opcode(LOAD);
-        step();
-        // digitalWriteFast(LOAD_E_KB, LOW);
-        // set_keyboard_digit(G);
-        // set_opcode(LOAD);
-        // step();
-        // digitalWriteFast(LOAD_E_KB, HIGH);
-        // digitalWrite(LOAD_E_KB, HIGH);
-        // delay(1000);
-        Serial.println("Display digit");
-        // digitalWriteFast(KD1, HIGH);
-        // digitalWriteFast(KD2, HIGH);
-        // digitalWriteFast(KD4, HIGH);
-        // digitalWriteFast(KD8, HIGH);
-        set_opcode(DISP);
-        step();
 
-        Serial.print("ext module selected ");
-        Serial.println(external_module_enabled());
+        // works
+        // set_opcode(MODULE);
+        // step();
+
+        // works
+        // set_opcode(DISP);
+        // step();
+
+        // works, though swapping X_Y twice does not work?
+        // set_opcode(SWAP_X_Y);
+        // step();
+
+        // does not work
+        // set_opcode(CLEAR_XYZ);
+        // step();
+
+        // works
+        //  set_opcode(SWAP_X_Y);
+        //  step();
+        //  delay(100);
+
+        // delay(100);
+        // // digitalWrite(LOAD_E_KB, HIGH);
+        // Serial.println("Display digit");
+        // set_opcode(DISP);
+        // step();
+        Serial.print("ext: ");
+        Serial.print(external_module_enabled());
+        Serial.print(", rst: ");
+        Serial.println(mainframe_reset());
         delay(1000);
         i++;
         i %= 16;
@@ -255,11 +262,32 @@ void set_opcode(uint8_t opcode) {
     Serial.println();
 }
 
-void set_keyboard_digit(uint8_t digit) {
-    digitalWrite(KD1, !(digit & 1));
-    digitalWrite(KD2, !((digit >> 1) & 1));
-    digitalWrite(KD4, !((digit >> 2) & 1));
-    digitalWrite(KD8, !((digit >> 3) & 1));
+void set_keyboard_digit(uint8_t digit, bool sign) {
+    if (sign) {
+        digitalWriteFast(PRESET_SIGNX_NEG, LOW);
+    } else {
+        digitalWriteFast(PRESET_SIGNX_NEG, HIGH);
+    }
+    if ((digit & 1)) {
+        digitalWriteFast(KD1, LOW)
+    } else {
+        digitalWriteFast(KD1, HIGH);
+    }
+    if (((digit >> 1) & 1)) {
+        digitalWriteFast(KD2, LOW);
+    } else {
+        digitalWriteFast(KD2, HIGH);
+    }
+    if (((digit >> 2) & 1)) {
+        digitalWriteFast(KD4, LOW);
+    } else {
+        digitalWriteFast(KD4, HIGH);
+    }
+    if (((digit >> 3) & 1)) {
+        digitalWriteFast(KD8, LOW);
+    } else {
+        digitalWriteFast(KD8, HIGH);
+    }
     Serial.print("digit: ");
     Serial.print(!((digit >> 3) & 1));
     Serial.print(!((digit >> 2) & 1));
@@ -283,7 +311,7 @@ void step() {
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     __asm__("nop\n\t");
-        __asm__("nop\n\t");
+    __asm__("nop\n\t");
     __asm__("nop\n\t");
     digitalWriteFast(EXT_START, LOW);
     __asm__("nop\n\t");
@@ -299,6 +327,19 @@ void step() {
     while (!digitalReadFast(EXT_STEP_COMPL)) {
     }
     sei();
+    delay(200);
+    // reset state
+    digitalWriteFast(KB_SIGN_E, HIGH);
+    digitalWriteFast(LOAD_E_KB, LOW);
+    digitalWriteFast(KD1, HIGH);
+    digitalWriteFast(KD2, HIGH);
+    digitalWriteFast(KD4, HIGH);
+    digitalWriteFast(KD8, HIGH);
+    digitalWriteFast(EXT_PROG_A, HIGH);
+    digitalWriteFast(EXT_PROG_B, HIGH);
+    digitalWriteFast(EXT_PROG_C, HIGH);
+    digitalWriteFast(EXT_PROG_D, HIGH);
+    digitalWriteFast(EXT_PROG_E, HIGH);
 }
 void loop() {
     // put your main code here, to run repeatedly:
@@ -347,6 +388,13 @@ bool external_module_enabled() {
     return false;
 }
 
+bool mainframe_reset() {
+    if (digitalReadFast(EXT_RESET) == LOW) {
+        return true;
+    }
+    return false;
+}
+
 bool select_module_input(bool A) {
     if (A) {
         digitalWriteFast(REMOTE_AB, HIGH);
@@ -363,8 +411,6 @@ void write_pin(IOpins_t pin, bool value) {
     }
     if (pin.mode == OUTPUT_OC) {
         pinModeFast(pin.number, OUTPUT);
-    }
-    if (pin.inverted_logic) {
     }
     // cannot set pinModeFast back until clockcycle
 }
