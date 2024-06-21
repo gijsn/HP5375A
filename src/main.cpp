@@ -5,12 +5,12 @@
 #define OUTPUT_OC 0x3
 enum _opcodes {
     NORMALIZE = 0,
-    MODULE = 2,
+    MODULE = 2,      // works
     PLUG_IN = 3,
     SQRT_X = 5,
-    SELF_CHECK = 6,
+    SELF_CHECK = 6,  // works
     CALIBRATE = 7,
-    DISP = 8,
+    DISP = 8,        // works
     TEN_X = 9,
     ADD = 10,
     SUBTRACT = 11,
@@ -20,14 +20,14 @@ enum _opcodes {
     SWAP_INT_X = 17,
     INT_X_Y = 19,
     TWO_X = 20,
-    SWAP_X_Y = 21,
-    CLEAR_X = 22,
+    SWAP_X_Y = 21,   // works
+    CLEAR_X = 22,    // works
     X_Y = 23,
     SWAP_EXT_X = 25,
     EXT_X_Y = 27,
     DIVIDE_X_10 = 28,
     SWAP_Z_X = 29,
-    CLEAR_XYZ = 30,
+    CLEAR_XYZ = 30,  // works
     Z_X_Y = 31
 };
 
@@ -77,11 +77,11 @@ enum _pins {
     KD2 = 25,
     KD4 = 27,
     KD8 = 29,
-    DP_LATCH = X,
-    DP1 = X,
-    DP2 = X,
-    DP4 = X,
-    DP8 = X,
+    DP_LATCH = 31,
+    DP1 = 33,
+    DP2 = 35,
+    DP4 = 37,
+    DP8 = 39,
     EXT_PROG_A = 45,
     EXT_PROG_B = 47,
     EXT_PROG_C = 49,
@@ -90,7 +90,7 @@ enum _pins {
     REMOTE_AB = X,
     EXT_START = 52,
     EXT_RESET = 50,
-    EXT_SHIFT13 = X,
+    EXT_SHIFT13 = 48,
     EXT_STEP_COMPL = 19,
     SW_RST = X,
     EXT_CLK = 18,
@@ -101,7 +101,7 @@ enum _pins {
     EXT_S4 = X,
     EXT_S8 = X,
     SIGNX = X,
-    DEFEAT_HOLD = X,
+    DEFEAT_HOLD = 40,
     EXT_SW = 42,
     PI_ERROR_DEFEAT = X,
     DIRTY_ZEROS = X
@@ -120,15 +120,15 @@ IOpins_t pin[NO_PINS] = {
     {SQ4, OUTPUT},
     {SQ8, OUTPUT},
     {KB_SIGN_E, OUTPUT},
-    {KD1, OUTPUT},  // open collector
-    {KD2, OUTPUT},  // open collector
-    {KD4, OUTPUT},  // open collector
-    {KD8, OUTPUT},  // open collector
+    {KD1, OUTPUT},     // open collector
+    {KD2, OUTPUT},     // open collector
+    {KD4, OUTPUT},     // open collector
+    {KD8, OUTPUT},     // open collector
     {DP_LATCH, OUTPUT},
-    {DP1, INPUT},  // open collector, temp fix
-    {DP2, INPUT},  // open collector, temp fix
-    {DP4, INPUT},  // open collector, temp fix
-    {DP8, INPUT},  // open collector, temp fix
+    {DP1, INPUT},      // open collector, temp fix
+    {DP2, INPUT},      // open collector, temp fix
+    {DP4, INPUT},      // open collector, temp fix
+    {DP8, INPUT},      // open collector, temp fix
     {EXT_PROG_A, OUTPUT},
     {EXT_PROG_B, OUTPUT},
     {EXT_PROG_C, OUTPUT},
@@ -137,8 +137,8 @@ IOpins_t pin[NO_PINS] = {
     {REMOTE_AB, OUTPUT},
     {EXT_START, OUTPUT},
     {EXT_RESET, OUTPUT},
-    {EXT_SHIFT13, OUTPUT},
-    {EXT_STEP_COMPL, OUTPUT},
+    {EXT_SHIFT13, INPUT},
+    {EXT_STEP_COMPL, INPUT},
     {SW_RST, OUTPUT},  // open collector
     {EXT_CLK, INPUT},
     {EXT_STORE, INPUT},
@@ -153,15 +153,13 @@ IOpins_t pin[NO_PINS] = {
     {PI_ERROR_DEFEAT, INPUT},
     {DIRTY_ZEROS, INPUT}};
 
-// put function declarations here:
-int myFunction(int, int);
-
 void set_opcode(uint8_t opcode);
 void set_keyboard_digit(uint8_t digit, bool sign);
+void set_keyboard_exponent(uint8_t exponent, bool sign);
 
 bool external_module_enabled();
 bool mainframe_reset();
-void step();
+void step(uint8_t opcode);
 
 void setup() {
     // put your setup code here, to run once:
@@ -175,41 +173,53 @@ void setup() {
         }
     }
     digitalWriteFast(LOAD_E_KB, HIGH);
-    digitalWriteFast(KB_SIGN_E, HIGH);
+    digitalWriteFast(KB_SIGN_E, LOW);
+    digitalWriteFast(PRESET_SIGNX_NEG, HIGH);
+    // this messes up the dot on all operations
+    // digitalWriteFast(DP1, LOW);
+    // digitalWriteFast(DP2, HIGH);
+    // digitalWriteFast(DP4, HIGH);
+    // digitalWriteFast(DP8, LOW);
+    // digitalWriteFast(DP_LATCH, HIGH);
     int i = 0;
-    // attachInterrupt(digitalPinToInterrupt(EXT_CLK), clock, RISING);
-    // attachInterrupt(digitalPinToInterrupt(EXT_STEP_COMPL), step_complete, RISING);
     while (true) {
-        // works
-        // set_opcode(CLEAR_XYZ);
-        // step();
+        // does not work?
+        // step(CLEAR_X);
 
         // works
-        // set_opcode(MODULE);
-        // step();
+        // step(CLEAR_XYZ);
 
         // works
-        // set_opcode(DISP);
-        // step();
+        // step(MODULE);
 
-        // works, though swapping X_Y twice does not work?
-        // set_opcode(SWAP_X_Y);
-        // step();
+        // works
+        // step(SWAP_X_Y);
+
+        // works, puts all 1's, also for mantissa
+        digitalWrite(SQ1, LOW);
+        step(SWAP_EXT_X);
 
         // does not work
-        // set_opcode(CLEAR_XYZ);
-        // step();
+        // set_keyboard_digit(2, true);
+        // step(LOAD);
+
+        // does not work
+        // set_keyboard_exponent(1, false);
+        // step(LOAD);
+        // digitalWriteFast(DEFEAT_HOLD, LOW);
+        // step(DISP);
+
+        // does not work
+
+        // set_keyboard_exponent(3, true);
+        // step(LOAD);
 
         // works
-        //  set_opcode(SWAP_X_Y);
-        //  step();
-        //  delay(100);
+        step(DISP);
 
-        // delay(100);
-        // // digitalWrite(LOAD_E_KB, HIGH);
-        // Serial.println("Display digit");
-        // set_opcode(DISP);
-        // step();
+        // does not produce the correct result
+        // step(SQRT_X);
+
         Serial.print("ext: ");
         Serial.print(external_module_enabled());
         Serial.print(", rst: ");
@@ -257,12 +267,49 @@ void set_opcode(uint8_t opcode) {
     Serial.println();
 }
 
-void set_keyboard_digit(uint8_t digit, bool sign) {
+void set_keyboard_exponent(uint8_t digit, bool sign) {
+    digitalWriteFast(LOAD_E_KB, LOW);
+    delay(100);
     if (sign) {
-        digitalWriteFast(PRESET_SIGNX_NEG, LOW);
+        digitalWriteFast(KB_SIGN_E, LOW);
     } else {
-        digitalWriteFast(PRESET_SIGNX_NEG, HIGH);
+        digitalWriteFast(KB_SIGN_E, HIGH);
     }
+    if ((digit & 1)) {
+        digitalWriteFast(KD1, LOW)
+    } else {
+        digitalWriteFast(KD1, HIGH);
+    }
+    if (((digit >> 1) & 1)) {
+        digitalWriteFast(KD2, LOW);
+    } else {
+        digitalWriteFast(KD2, HIGH);
+    }
+    if (((digit >> 2) & 1)) {
+        digitalWriteFast(KD4, LOW);
+    } else {
+        digitalWriteFast(KD4, HIGH);
+    }
+    if (((digit >> 3) & 1)) {
+        digitalWriteFast(KD8, LOW);
+    } else {
+        digitalWriteFast(KD8, HIGH);
+    }
+    Serial.print("exponent: ");
+    Serial.print(((digit >> 3) & 1));
+    Serial.print(((digit >> 2) & 1));
+    Serial.print(((digit >> 1) & 1));
+    Serial.print((digit & 1));
+    Serial.println();
+}
+
+void set_negative() {
+    digitalWriteFast(PRESET_SIGNX_NEG, HIGH);
+    step(LOAD);
+    step(LOAD);
+}
+
+void set_keyboard_digit(uint8_t digit, bool sign) {
     if ((digit & 1)) {
         digitalWriteFast(KD1, LOW)
     } else {
@@ -291,7 +338,8 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     Serial.println();
 }
 
-void step() {
+void step(uint8_t opcode) {
+    set_opcode(opcode);
     cli();
     // catch rising edge of clock
     while (digitalReadFast(EXT_CLK)) {
@@ -317,15 +365,17 @@ void step() {
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     __asm__("nop\n\t");
+    // TODO: implement 13 pulses for external loading
+
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     while (!digitalReadFast(EXT_STEP_COMPL)) {
     }
     sei();
-    delay(200);
+
     // reset state
-    digitalWriteFast(KB_SIGN_E, HIGH);
-    digitalWriteFast(LOAD_E_KB, LOW);
+    digitalWriteFast(KB_SIGN_E, LOW);
+    digitalWriteFast(LOAD_E_KB, HIGH);
     digitalWriteFast(KD1, HIGH);
     digitalWriteFast(KD2, HIGH);
     digitalWriteFast(KD4, HIGH);
@@ -367,7 +417,7 @@ void loop() {
 
 void write_character(char c) {
     uint8_t val = atoi(&c);
-    set_opcode(LOAD);
+    // set_opcode(LOAD);
     digitalWriteFast(DEFEAT_HOLD, LOW);
     digitalWriteFast(EXT_PROG_A, HIGH);
     digitalWriteFast(EXT_PROG_B, LOW);
