@@ -14,21 +14,27 @@ enum _opcodes {
     TEN_X = 9,
     ADD = 10,
     SUBTRACT = 11,
+    ONE_DIV_X = 12,
     LOAD = 13,
     DIVIDE = 14,
     MULTIPLY = 15,
+    SWAP_SQS_X = 16,
     SWAP_INT_X = 17,
-    INT_X_Y = 19,
+    MOVE_SQS_X_Y = 18,
+    MOVE_INT_X_Y = 19,
     TWO_X = 20,
     SWAP_X_Y = 21,   // works
     CLEAR_X = 22,    // works
-    X_Y = 23,
+    MOVE_X_Y = 23,
+    SWAP_PI_X = 24,
     SWAP_EXT_X = 25,
-    EXT_X_Y = 27,
+    MOVE_PI_X_Y = 26,
+    MOVE_EXT_X_Y = 27,
     DIVIDE_X_10 = 28,
     SWAP_Z_X = 29,
     CLEAR_XYZ = 30,  // works
-    Z_X_Y = 31
+    MOVE_Z_X_Y = 31,
+
 };
 
 enum _digits {
@@ -153,7 +159,9 @@ IOpins_t pin[NO_PINS] = {
     {PI_ERROR_DEFEAT, INPUT},
     {DIRTY_ZEROS, INPUT}};
 
+bool opcode_ext(uint8_t opcode);
 void set_opcode(uint8_t opcode);
+void set_ext_value(uint8_t digit);
 void set_keyboard_digit(uint8_t digit, bool sign);
 void set_keyboard_exponent(uint8_t exponent, bool sign);
 
@@ -184,7 +192,7 @@ void setup() {
     int i = 0;
     while (true) {
         // does not work?
-        // step(CLEAR_X);
+        step(CLEAR_X);
 
         // works
         // step(CLEAR_XYZ);
@@ -228,6 +236,17 @@ void setup() {
         i++;
         i %= 16;
     }
+}
+
+bool opcode_ext(uint8_t opcode) {
+    switch (opcode) {
+        case SWAP_INT_X:
+        case MOVE_INT_X_Y:
+        case SWAP_EXT_X:
+        case MOVE_EXT_X_Y:
+            return true;
+    }
+    return false;
 }
 
 void set_opcode(uint8_t opcode) {
@@ -337,9 +356,35 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     Serial.print(!(digit & 1));
     Serial.println();
 }
+void set_ext_value(uint8_t digit) {
+    if ((digit & 1)) {
+        digitalWriteFast(SQ1, LOW)
+    } else {
+        digitalWriteFast(SQ1, HIGH);
+    }
+    if (((digit >> 1) & 1)) {
+        digitalWriteFast(SQ2, LOW);
+    } else {
+        digitalWriteFast(SQ2, HIGH);
+    }
+    if (((digit >> 2) & 1)) {
+        digitalWriteFast(SQ4, LOW);
+    } else {
+        digitalWriteFast(SQ4, HIGH);
+    }
+    if (((digit >> 3) & 1)) {
+        digitalWriteFast(SQ8, LOW);
+    } else {
+        digitalWriteFast(SQ8, HIGH);
+    }
+}
 
 void step(uint8_t opcode) {
     set_opcode(opcode);
+    bool ext = opcode_ext(opcode);
+    uint16_t counter = 0;
+    uint8_t val[14] = {
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0};
     cli();
     // catch rising edge of clock
     while (digitalReadFast(EXT_CLK)) {
@@ -369,10 +414,18 @@ void step(uint8_t opcode) {
 
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
-    while (!digitalReadFast(EXT_STEP_COMPL)) {
+    if (ext) {
+        while (counter < 13) {
+            counter++;
+            set_ext_value(val[counter]);
+        }
+    } else {
+        while (!digitalReadFast(EXT_STEP_COMPL)) {
+        }
     }
-    sei();
 
+    sei();
+    Serial.println(counter);
     // reset state
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(LOAD_E_KB, HIGH);
