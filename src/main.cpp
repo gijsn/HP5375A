@@ -102,10 +102,10 @@ enum _pins {
     EXT_CLK = 18,
     EXT_STORE = X,
     PRESET_SIGNX_NEG = X,
-    EXT_S1 = X,
-    EXT_S2 = X,
-    EXT_S4 = X,
-    EXT_S8 = X,
+    EXT_S1 = A8,
+    EXT_S2 = A9,
+    EXT_S4 = A10,
+    EXT_S8 = A11,
     SIGNX = X,
     DEFEAT_HOLD = 40,
     EXT_SW = 42,
@@ -204,6 +204,8 @@ void setup() {
         // step(SWAP_X_Y);
 
         // works, puts all 1's, also for mantissa
+        step(SWAP_EXT_X);
+        delay(1);
         step(SWAP_EXT_X);
 
         // does not work
@@ -382,8 +384,12 @@ void step(uint8_t opcode) {
     set_opcode(opcode);
     bool ext = opcode_ext(opcode);
     uint16_t counter = 0;
-    uint8_t val[14] = {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
+    int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 9, 5};
+    for (int i = 0; i < 13; i++) {
+        val[i] = ~val[i];
+    }
+    int8_t recv;
+    // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     cli();
     // catch rising edge of clock
     while (digitalReadFast(EXT_CLK)) {
@@ -414,25 +420,27 @@ void step(uint8_t opcode) {
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
-        PORTF = ~val[counter++];
+        PORTF = val[counter++];
         while (((PINL) & (1UL << 1))) {
         }
         while (counter < 13) {
-            PORTF = 0xF;
-            __asm__("nop\n\t");
-            __asm__("nop\n\t");
-            PORTF = ~val[counter++];
+            PORTF = val[counter++];
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
-
-            //     // digitalWriteFast(SQ1, LOW);
-            //     // digitalWriteFast(SQ2, LOW);
-            //     // digitalWriteFast(SQ4, LOW);
-            //     // digitalWriteFast(SQ8, LOW);
-            //     // set_ext_value(val[counter][0], val[counter][1], val[counter][2], val[counter][3]);
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            // not working very well
+            //  recv = ((PINK) & (15UL));
+            //      // digitalWriteFast(SQ1, LOW);
+            //      // digitalWriteFast(SQ2, LOW);
+            //      // digitalWriteFast(SQ4, LOW);
+            //      // digitalWriteFast(SQ8, LOW);
+            //      // set_ext_value(val[counter][0], val[counter][1], val[counter][2], val[counter][3]);
         }
         PORTF = 0xF;
     } else {
@@ -441,7 +449,9 @@ void step(uint8_t opcode) {
     }
 
     sei();
-    Serial.println(counter);
+    Serial.print(counter);
+    Serial.print(" ");
+    Serial.println(recv);
     // reset state
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(LOAD_E_KB, HIGH);
