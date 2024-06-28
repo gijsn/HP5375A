@@ -74,10 +74,10 @@ enum _exponents {
 #define X 10
 enum _pins {
     LOAD_E_KB = 22,
-    SQ1 = 24,
-    SQ2 = 26,
-    SQ4 = 28,
-    SQ8 = 30,
+    SQ1 = A0,
+    SQ2 = A1,
+    SQ4 = A2,
+    SQ8 = A3,
     KB_SIGN_E = 32,
     KD1 = 23,
     KD2 = 25,
@@ -161,7 +161,7 @@ IOpins_t pin[NO_PINS] = {
 
 bool opcode_ext(uint8_t opcode);
 void set_opcode(uint8_t opcode);
-void set_ext_value(uint8_t digit);
+void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8);
 void set_keyboard_digit(uint8_t digit, bool sign);
 void set_keyboard_exponent(uint8_t exponent, bool sign);
 
@@ -204,7 +204,6 @@ void setup() {
         // step(SWAP_X_Y);
 
         // works, puts all 1's, also for mantissa
-        digitalWrite(SQ1, LOW);
         step(SWAP_EXT_X);
 
         // does not work
@@ -356,23 +355,23 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     Serial.print(!(digit & 1));
     Serial.println();
 }
-void set_ext_value(uint8_t digit) {
-    if ((digit & 1)) {
+void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8) {
+    if (digit1) {
         digitalWriteFast(SQ1, LOW)
     } else {
         digitalWriteFast(SQ1, HIGH);
     }
-    if (((digit >> 1) & 1)) {
+    if (digit2) {
         digitalWriteFast(SQ2, LOW);
     } else {
         digitalWriteFast(SQ2, HIGH);
     }
-    if (((digit >> 2) & 1)) {
+    if (digit4) {
         digitalWriteFast(SQ4, LOW);
     } else {
         digitalWriteFast(SQ4, HIGH);
     }
-    if (((digit >> 3) & 1)) {
+    if (digit8) {
         digitalWriteFast(SQ8, LOW);
     } else {
         digitalWriteFast(SQ8, HIGH);
@@ -384,7 +383,7 @@ void step(uint8_t opcode) {
     bool ext = opcode_ext(opcode);
     uint16_t counter = 0;
     uint8_t val[14] = {
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0};
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     cli();
     // catch rising edge of clock
     while (digitalReadFast(EXT_CLK)) {
@@ -415,10 +414,27 @@ void step(uint8_t opcode) {
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
-        while (counter < 13) {
-            counter++;
-            set_ext_value(val[counter]);
+        PORTF = ~val[counter++];
+        while (((PINL) & (1UL << 1))) {
         }
+        while (counter < 13) {
+            PORTF = 0xF;
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            PORTF = ~val[counter++];
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+            __asm__("nop\n\t");
+
+            //     // digitalWriteFast(SQ1, LOW);
+            //     // digitalWriteFast(SQ2, LOW);
+            //     // digitalWriteFast(SQ4, LOW);
+            //     // digitalWriteFast(SQ8, LOW);
+            //     // set_ext_value(val[counter][0], val[counter][1], val[counter][2], val[counter][3]);
+        }
+        PORTF = 0xF;
     } else {
         while (!digitalReadFast(EXT_STEP_COMPL)) {
         }
@@ -433,6 +449,10 @@ void step(uint8_t opcode) {
     digitalWriteFast(KD2, HIGH);
     digitalWriteFast(KD4, HIGH);
     digitalWriteFast(KD8, HIGH);
+    digitalWriteFast(SQ1, HIGH);
+    digitalWriteFast(SQ2, HIGH);
+    digitalWriteFast(SQ4, HIGH);
+    digitalWriteFast(SQ8, HIGH);
     digitalWriteFast(EXT_PROG_A, HIGH);
     digitalWriteFast(EXT_PROG_B, HIGH);
     digitalWriteFast(EXT_PROG_C, HIGH);
