@@ -384,13 +384,12 @@ void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8) {
 void step(uint8_t opcode) {
     set_opcode(opcode);
     bool ext = opcode_ext(opcode);
-    uint8_t send_ctr = 0;
-    uint8_t recv_ctr = 0;
+    uint8_t ctr = 0;
     int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 12, 5};
     for (int i = 0; i < 13; i++) {
         val[i] = ~val[i];
     }
-    uint8_t recv[14];
+    int8_t recv[14];
     // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     cli();
     // catch rising edge of clock
@@ -422,14 +421,16 @@ void step(uint8_t opcode) {
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
-        PORTF = val[send_ctr++];
+        PORTF = val[ctr++];
+        recv[ctr] = ((PINK));
         while (((PINL) & (1UL << 1))) {
         }
         // with -OFast, we get all instructions duplicated 13 times to skip the while loop
         // The following takes 10 instructions
-        while (send_ctr < 13) {
-            PORTF = val[send_ctr++];
-            // recv[recv_ctr++] = ((PINK));
+        while (ctr < 13) {
+            recv[ctr] = ((PINK));
+            PORTF = val[ctr++];
+            __asm__("nop\n\tnop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
@@ -439,13 +440,6 @@ void step(uint8_t opcode) {
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
-            // not working very well
-            //
-            //      // digitalWriteFast(SQ1, LOW);
-            //      // digitalWriteFast(SQ2, LOW);
-            //      // digitalWriteFast(SQ4, LOW);
-            //      // digitalWriteFast(SQ8, LOW);
-            //      // set_ext_value(val[counter][0], val[counter][1], val[counter][2], val[counter][3]);
         }
         PORTF = 0xF;
     } else {
@@ -454,10 +448,8 @@ void step(uint8_t opcode) {
     }
 
     sei();
-    Serial.print(send_ctr);
-    Serial.print(" ");
-    Serial.println(recv[1]);
     // reset state
+    // cannot yet access val & recv here without impacting performance during transmit and read
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(LOAD_E_KB, HIGH);
     digitalWriteFast(KD1, HIGH);
