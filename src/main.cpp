@@ -180,6 +180,7 @@ void setup() {
             digitalWrite(pin[i].number, HIGH);
         }
     }
+    DDRK = 0x0;
     digitalWriteFast(LOAD_E_KB, HIGH);
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(PRESET_SIGNX_NEG, HIGH);
@@ -383,12 +384,13 @@ void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8) {
 void step(uint8_t opcode) {
     set_opcode(opcode);
     bool ext = opcode_ext(opcode);
-    uint16_t counter = 0;
-    int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 9, 5};
+    uint8_t send_ctr = 0;
+    uint8_t recv_ctr = 0;
+    int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 12, 5};
     for (int i = 0; i < 13; i++) {
         val[i] = ~val[i];
     }
-    int8_t recv;
+    uint8_t recv[14];
     // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     cli();
     // catch rising edge of clock
@@ -420,11 +422,14 @@ void step(uint8_t opcode) {
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
-        PORTF = val[counter++];
+        PORTF = val[send_ctr++];
         while (((PINL) & (1UL << 1))) {
         }
-        while (counter < 13) {
-            PORTF = val[counter++];
+        // with -OFast, we get all instructions duplicated 13 times to skip the while loop
+        // The following takes 10 instructions
+        while (send_ctr < 13) {
+            PORTF = val[send_ctr++];
+            // recv[recv_ctr++] = ((PINK));
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
@@ -435,7 +440,7 @@ void step(uint8_t opcode) {
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             // not working very well
-            //  recv = ((PINK) & (15UL));
+            //
             //      // digitalWriteFast(SQ1, LOW);
             //      // digitalWriteFast(SQ2, LOW);
             //      // digitalWriteFast(SQ4, LOW);
@@ -449,9 +454,9 @@ void step(uint8_t opcode) {
     }
 
     sei();
-    Serial.print(counter);
+    Serial.print(send_ctr);
     Serial.print(" ");
-    Serial.println(recv);
+    Serial.println(recv[1]);
     // reset state
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(LOAD_E_KB, HIGH);
