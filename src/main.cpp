@@ -169,6 +169,9 @@ bool external_module_enabled();
 bool mainframe_reset();
 void step(uint8_t opcode);
 
+int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 12, 5};
+int8_t recv[14] = {0};
+
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
@@ -381,15 +384,21 @@ void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8) {
     }
 }
 
+// void print_vals(int8_t val1[], int8_t recv1[]) {
+//     char tmp[100];
+//     sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", val1[12], val1[11], val1[10], val1[9], val1[4], val1[5], val1[6], val1[7], val1[8], val1[9], val1[10], val1[11], val1[12]);
+//     Serial.println(tmp);
+//     sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", recv1[12], recv1[11], recv1[10], recv1[9], recv1[4], recv1[5], recv1[6], recv1[7], recv1[8], recv1[9], recv1[10], recv1[11], recv1[12]);
+//     Serial.println(tmp);
+// }
+
 void step(uint8_t opcode) {
     set_opcode(opcode);
     bool ext = opcode_ext(opcode);
     uint8_t ctr = 0;
-    int8_t val[13] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 9, 12, 5};
     for (int i = 0; i < 13; i++) {
         val[i] = ~val[i];
     }
-    int8_t recv[14];
     // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     cli();
     // catch rising edge of clock
@@ -417,18 +426,17 @@ void step(uint8_t opcode) {
     __asm__("nop\n\t");
     __asm__("nop\n\t");
     // TODO: implement 13 pulses for external loading
-
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
         PORTF = val[ctr++];
-        recv[ctr] = ((PINK));
-        while (((PINL) & (1UL << 1))) {
+        while (((PINL) & (2UL))) {
         }
+        __asm__("nop\n\t");
         // with -OFast, we get all instructions duplicated 13 times to skip the while loop
         // The following takes 10 instructions
         while (ctr < 13) {
-            recv[ctr] = ((PINK));
+            recv[ctr] = ~((PINK));
             PORTF = val[ctr++];
             __asm__("nop\n\tnop\n\t");
             __asm__("nop\n\t");
@@ -443,13 +451,12 @@ void step(uint8_t opcode) {
         }
         PORTF = 0xF;
     } else {
-        while (!digitalReadFast(EXT_STEP_COMPL)) {
+        while (!((PINC) & (4UL))) {
         }
     }
-
     sei();
-    // reset state
-    // cannot yet access val & recv here without impacting performance during transmit and read
+    //  reset state
+    //  cannot yet access val & recv here without impacting performance during transmit and read
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(LOAD_E_KB, HIGH);
     digitalWriteFast(KD1, HIGH);
