@@ -217,11 +217,27 @@ void setup() {
         // seems decimal point is 1 position to the left in real life
         prepare_ext_value("12.65e1");
         step(SWAP_EXT_X);
+        step(DISP);
         wait_for_input();
 
-        // step(SQRT_X);
+        step(SWAP_X_Y);
+        step(DISP);
+        wait_for_input();
+
+        prepare_ext_value("12.65e1");
+        step(SWAP_EXT_X);
+        step(DISP);
+        wait_for_input();
+
+        // this does not work
+        step(DIVIDE);
+        step(DISP);
+        wait_for_input();
+
+        // does not work
+        // step(SQRT);
         // step(DISP);
-        // wait_for_input();
+
         // does not work
         // set_keyboard_digit(2, true);
         // step(LOAD);
@@ -239,7 +255,7 @@ void setup() {
 
         // works
         step(DISP);
-
+        wait_for_input();
         // does not produce the correct result
         // step(SQRT_X);
 
@@ -377,18 +393,15 @@ void prepare_ext_value(char *input) {
     uint8_t len_input = strlen(input);
     char *cpy_input = (char *)malloc(sizeof(char) * len_input);
     strcpy(cpy_input, input);
-    Serial.println(input);
     uint8_t exponent = 0;
     uint8_t tmp_ext_value[13] = {0};
     // check sign of mantissa
     if (*cpy_input == '-') {
         // decimal sign is negative
-        Serial.println("neg");
         cpy_input++;
         tmp_ext_value[12] &= ~1;
     } else {
         // decimal sign is positive
-        Serial.println("pos");
         tmp_ext_value[12] |= 1;
     }
     char *decimal = strtok(cpy_input, ".");
@@ -404,7 +417,6 @@ void prepare_ext_value(char *input) {
     // capture fraction
     char *fraction = strtok(NULL, "e");
     unsigned long val = strtoul(fraction, NULL, 10);
-    Serial.println(val);
     // reverse number to correct for mantissa behavior (10s are bigger in value than 100s behind .)
     unsigned long rev_val = 0;
     while (val > 0) {
@@ -432,11 +444,9 @@ void prepare_ext_value(char *input) {
     char *sign_exp = strtok(NULL, "");
     if (*sign_exp == '-') {
         // exponent sign is negative
-        Serial.println("neg exp");
         tmp_ext_value[12] &= ~4;
     } else {
         // exponent sign is positive
-        Serial.println("pos exp");
         tmp_ext_value[12] |= 4;
     }
 
@@ -445,7 +455,7 @@ void prepare_ext_value(char *input) {
     tmp_ext_value[12] |= (exponent / 16) << 4;
 
     char tmp[100];
-    sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", tmp_ext_value[0], tmp_ext_value[1], tmp_ext_value[2], tmp_ext_value[3], tmp_ext_value[4], tmp_ext_value[5], tmp_ext_value[6], tmp_ext_value[7], tmp_ext_value[8], tmp_ext_value[9], tmp_ext_value[10], tmp_ext_value[11], tmp_ext_value[12]);
+    sprintf(tmp, "%i %i %i %i %i %i %i %i %i %i %i %i %i", tmp_ext_value[0], tmp_ext_value[1], tmp_ext_value[2], tmp_ext_value[3], tmp_ext_value[4], tmp_ext_value[5], tmp_ext_value[6], tmp_ext_value[7], tmp_ext_value[8], tmp_ext_value[9], tmp_ext_value[10], tmp_ext_value[11], tmp_ext_value[12]);
     Serial.print("Prepare val: ");
     Serial.println(tmp);
     for (int i = 0; i < 13; i++) {
@@ -456,9 +466,11 @@ void prepare_ext_value(char *input) {
 
 void print_vals(uint8_t val1[], uint8_t recv1[]) {
     char tmp[100];
-    sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", val1[0], val1[1], val1[2], val1[3], val1[4], val1[5], val1[6], val1[7], val1[8], val1[9], val1[10], val1[11], val1[12]);
+    sprintf(tmp, "%i %i %i %i %i %i %i %i %i %i %i %i %i", (uint8_t)~val1[0], (uint8_t)~val1[1], (uint8_t)~val1[2], (uint8_t)~val1[3], (uint8_t)~val1[4], (uint8_t)~val1[5], (uint8_t)~val1[6], (uint8_t)~val1[7], (uint8_t)~val1[8], (uint8_t)~val1[9], (uint8_t)~val1[10], (uint8_t)~val1[11], (uint8_t)~val1[12]);
+    Serial.print("sent: ");
     Serial.println(tmp);
-    sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", recv1[0], recv1[1], recv1[2], recv1[3], recv1[4], recv1[5], recv1[6], recv1[7], recv1[8], recv1[9], recv1[10], recv1[11], recv1[12]);
+    sprintf(tmp, "%i %i %i %i %i %i %i %i %i %i %i %i %i", recv1[0], recv1[1], recv1[2], recv1[3], recv1[4], recv1[5], recv1[6], recv1[7], recv1[8], recv1[9], recv1[10], recv1[11], recv1[12]);
+    Serial.print("recv: ");
     Serial.println(tmp);
 }
 
@@ -516,9 +528,8 @@ void step(uint8_t opcode) {
         }
         ext_recv[ctr] = ((PINK));
         PORTF = 0xF;
-    } else {
-        while (!((PINC) & (4UL))) {
-        }
+    }
+    while (!((PINC) & (4UL))) {
     }
     sei();
     if (ext) {
@@ -625,6 +636,5 @@ void wait_for_input() {
     }
     while (Serial.available() > 0) {
         Serial.read();
-        Serial.println("a");
     }
 }
