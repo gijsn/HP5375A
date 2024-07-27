@@ -161,16 +161,18 @@ IOpins_t pin[NO_PINS] = {
 
 bool opcode_ext(uint8_t opcode);
 void set_opcode(uint8_t opcode);
-void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8);
+void prepare_ext_value(char *input);
 void set_keyboard_digit(uint8_t digit, bool sign);
 void set_keyboard_exponent(uint8_t exponent, bool sign);
+void print_vals(uint8_t val1[], uint8_t recv1[]);
 
 bool external_module_enabled();
 bool mainframe_reset();
 void step(uint8_t opcode);
 
-int8_t val[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
-int8_t recv[14] = {0};
+uint8_t ext_value[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
+// length needs to be 1 longer for correct loading, is corrected later
+int8_t ext_recv[14] = {0};
 
 void setup() {
     // put your setup code here, to run once:
@@ -194,7 +196,7 @@ void setup() {
     // digitalWriteFast(DP8, LOW);
     // digitalWriteFast(DP_LATCH, HIGH);
     for (int i = 0; i < 13; i++) {
-        val[i] = ~val[i];
+        ext_value[i] = ~ext_value[i];
     }
     int i = 0;
     while (true) {
@@ -211,6 +213,7 @@ void setup() {
         // step(SWAP_X_Y);
 
         // works, puts all 1's, also for mantissa
+        prepare_ext_value("12.65e1");
         step(SWAP_EXT_X);
         delay(1);
         step(SWAP_EXT_X);
@@ -365,30 +368,89 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     Serial.print(!(digit & 1));
     Serial.println();
 }
-void set_ext_value(bool digit1, bool digit2, bool digit4, bool digit8) {
-    if (digit1) {
-        digitalWriteFast(SQ1, LOW)
+// accepts input in the form of "-?d+.d+e-?d", like -5.4e-3
+void prepare_ext_value(char *input) {
+    uint8_t len_input = strlen(input);
+    char *cpy_input = (char *)malloc(sizeof(char) * len_input);
+    strcpy(cpy_input, input);
+    Serial.println(input);
+    uint8_t exponent = 0;
+    uint8_t tmp_ext_value[13] = {0};
+    // check sign of mantissa
+    if (*cpy_input == '-') {
+        // decimal sign is negative
+        Serial.println("neg");
+        cpy_input++;
+        tmp_ext_value[12] &= ~1;
     } else {
-        digitalWriteFast(SQ1, HIGH);
+        // decimal sign is positive
+        Serial.println("pos");
+        tmp_ext_value[12] |= 1;
     }
-    if (digit2) {
-        digitalWriteFast(SQ2, LOW);
+    char *decimal = strtok(cpy_input, ".");
+    uint8_t len_decimal = strlen(decimal);
+    if (len_decimal == 0) {
+        tmp_ext_value[10] = 0;
+        tmp_ext_value[9] = 0;
     } else {
-        digitalWriteFast(SQ2, HIGH);
+        tmp_ext_value[10] = atoi(decimal) / 10;
+        tmp_ext_value[9] = atoi(decimal) % 10;
+        exponent += max(len_decimal - 2, 0);
     }
-    if (digit4) {
-        digitalWriteFast(SQ4, LOW);
+    // capture fraction
+    char *fraction = strtok(NULL, "e");
+    unsigned long val = strtoul(fraction, NULL, 10);
+    Serial.println(val);
+    // reverse number to correct for mantissa behavior (10s are bigger in value than 100s behind .)
+    unsigned long rev_val = 0;
+    while (val > 0) {
+        rev_val = rev_val * 10 + val % 10;
+        val = val / 10;
+    }
+    tmp_ext_value[0] = rev_val / 100000000;
+    rev_val %= 100000000;
+    tmp_ext_value[1] = rev_val / 10000000;
+    rev_val %= 10000000;
+    tmp_ext_value[2] = rev_val / 1000000;
+    rev_val %= 1000000;
+    tmp_ext_value[3] = rev_val / 100000;
+    rev_val %= 100000;
+    tmp_ext_value[4] = rev_val / 10000;
+    rev_val %= 10000;
+    tmp_ext_value[5] = rev_val / 1000;
+    rev_val %= 1000;
+    tmp_ext_value[6] = rev_val / 100;
+    rev_val %= 100;
+    tmp_ext_value[7] = rev_val / 10;
+    tmp_ext_value[8] = rev_val % 10;
+
+    // remaining characters are exponent
+    char *sign_exp = strtok(NULL, "");
+    if (*sign_exp == '-') {
+        // exponent sign is negative
+        Serial.println("neg exp");
+        tmp_ext_value[12] &= ~4;
     } else {
-        digitalWriteFast(SQ4, HIGH);
+        // exponent sign is positive
+        Serial.println("pos exp");
+        tmp_ext_value[12] |= 4;
     }
-    if (digit8) {
-        digitalWriteFast(SQ8, LOW);
-    } else {
-        digitalWriteFast(SQ8, HIGH);
+
+    exponent += atoi(sign_exp++);
+    tmp_ext_value[11] = exponent % 16;
+    tmp_ext_value[12] |= (exponent / 16) << 4;
+
+    char tmp[100];
+    sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", tmp_ext_value[0], tmp_ext_value[1], tmp_ext_value[2], tmp_ext_value[3], tmp_ext_value[4], tmp_ext_value[5], tmp_ext_value[6], tmp_ext_value[7], tmp_ext_value[8], tmp_ext_value[9], tmp_ext_value[10], tmp_ext_value[11], tmp_ext_value[12]);
+    Serial.print("Prepare val: ");
+    Serial.println(tmp);
+    for (int i = 0; i < 13; i++) {
+        tmp_ext_value[i] = ~tmp_ext_value[i];
     }
+    memcpy(ext_value, tmp_ext_value, 13);
 }
 
-void print_vals(int8_t val1[], int8_t recv1[]) {
+void print_vals(uint8_t val1[], uint8_t recv1[]) {
     char tmp[100];
     sprintf(tmp, "%d %d %d %d %d %d %d %d %d %d %d %d %d", val1[0], val1[1], val1[2], val1[3], val1[4], val1[5], val1[6], val1[7], val1[8], val1[9], val1[10], val1[11], val1[12]);
     Serial.println(tmp);
@@ -430,14 +492,14 @@ void step(uint8_t opcode) {
     digitalWriteFast(EXT_START, HIGH);
     // catch rising edge of ext step complete
     if (ext) {
-        PORTF = val[ctr++];
+        PORTF = ext_value[ctr++];
         while (((PINL) & (2UL))) {
         }
         // with -OFast, we get all instructions duplicated 13 times to skip the while loop
         // The following takes 10 instructions
         while (ctr < 13) {
-            recv[ctr] = ((PINK));
-            PORTF = val[ctr++];
+            ext_recv[ctr] = ((PINK));
+            PORTF = ext_value[ctr++];
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
@@ -448,7 +510,7 @@ void step(uint8_t opcode) {
             __asm__("nop\n\t");
             __asm__("nop\n\t");
         }
-        recv[ctr] = ((PINK));
+        ext_recv[ctr] = ((PINK));
         PORTF = 0xF;
     } else {
         while (!((PINC) & (4UL))) {
@@ -457,9 +519,9 @@ void step(uint8_t opcode) {
     sei();
     if (ext) {
         for (int i = 0; i < 13; i++) {
-            recv[i] = recv[i + 1] & 0xF;
+            ext_recv[i] = ext_recv[i + 1] & 0xF;
         }
-        print_vals(val, recv);
+        print_vals(ext_value, ext_recv);
     }
     //  reset state
     //  cannot yet access val & recv here without impacting performance during transmit and read
@@ -533,7 +595,7 @@ bool mainframe_reset() {
     return false;
 }
 
-bool select_module_input(bool A) {
+void select_module_input(bool A) {
     if (A) {
         digitalWriteFast(REMOTE_AB, HIGH);
     }
