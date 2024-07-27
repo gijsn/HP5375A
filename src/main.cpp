@@ -165,6 +165,7 @@ void prepare_ext_value(char *input);
 void set_keyboard_digit(uint8_t digit, bool sign);
 void set_keyboard_exponent(uint8_t exponent, bool sign);
 void print_vals(uint8_t val1[], uint8_t recv1[]);
+void wait_for_input();
 
 bool external_module_enabled();
 bool mainframe_reset();
@@ -172,7 +173,7 @@ void step(uint8_t opcode);
 
 uint8_t ext_value[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
 // length needs to be 1 longer for correct loading, is corrected later
-int8_t ext_recv[14] = {0};
+uint8_t ext_recv[14] = {0};
 
 void setup() {
     // put your setup code here, to run once:
@@ -212,12 +213,15 @@ void setup() {
         // works
         // step(SWAP_X_Y);
 
-        // works, puts all 1's, also for mantissa
+        // works with parser
+        // seems decimal point is 1 position to the left in real life
         prepare_ext_value("12.65e1");
         step(SWAP_EXT_X);
-        delay(1);
-        step(SWAP_EXT_X);
+        wait_for_input();
 
+        // step(SQRT_X);
+        // step(DISP);
+        // wait_for_input();
         // does not work
         // set_keyboard_digit(2, true);
         // step(LOAD);
@@ -613,4 +617,14 @@ void write_pin(IOpins_t pin, bool value) {
         pinModeFast(pin.number, OUTPUT);
     }
     // cannot set pinModeFast back until clockcycle
+}
+
+void wait_for_input() {
+    while (Serial.available() == 0) {
+        delay(1);
+    }
+    while (Serial.available() > 0) {
+        Serial.read();
+        Serial.println("a");
+    }
 }
