@@ -2,6 +2,8 @@
 #include <digitalWriteFast.h>
 #include <pins_arduino.h>
 
+// put the counter to EXT to make the keyboard work
+
 #define OUTPUT_OC 0x3
 enum _opcodes {
     NORMALIZE = 0,
@@ -126,10 +128,10 @@ IOpins_t pin[NO_PINS] = {
     {SQ4, OUTPUT},
     {SQ8, OUTPUT},
     {KB_SIGN_E, OUTPUT},
-    {KD1, OUTPUT},     // open collector
-    {KD2, OUTPUT},     // open collector
-    {KD4, OUTPUT},     // open collector
-    {KD8, OUTPUT},     // open collector
+    {KD1, OUTPUT_OC},  // open collector
+    {KD2, OUTPUT_OC},  // open collector
+    {KD4, OUTPUT_OC},  // open collector
+    {KD8, OUTPUT_OC},  // open collector
     {DP_LATCH, OUTPUT},
     {DP1, INPUT},      // open collector, temp fix
     {DP2, INPUT},      // open collector, temp fix
@@ -161,7 +163,7 @@ IOpins_t pin[NO_PINS] = {
 
 bool opcode_ext(uint8_t opcode);
 void set_opcode(uint8_t opcode);
-void prepare_ext_value(char *input);
+void prepare_ext_value(char* input);
 void set_keyboard_digit(uint8_t digit, bool sign);
 void set_keyboard_exponent(uint8_t exponent, bool sign);
 void print_vals(uint8_t val1[], uint8_t recv1[]);
@@ -203,8 +205,60 @@ void setup() {
     while (true) {
         // does not work?
         step(CLEAR_X);
+        delay(10);
+        step(DISP);
+        wait_for_input();
+        // pinModeFast(DP1, OUTPUT);
+        // pinModeFast(DP2, OUTPUT);
+        // pinModeFast(DP4, OUTPUT);
+        // pinModeFast(DP8, OUTPUT);
+        digitalWriteFast(LOAD_E_KB, LOW);
+        set_keyboard_digit(2, false);
+        digitalWriteFast(DEFEAT_HOLD, LOW);
+        delay(10);
+        // digitalWriteFast(DP1, HIGH);
+        // digitalWriteFast(DP2, HIGH);
+        // digitalWriteFast(DP4, LOW);
+        // digitalWriteFast(DP8, HIGH);
+        step(LOAD);
+        wait_for_input();
+        digitalWriteFast(DEFEAT_HOLD, HIGH);
+        continue;
 
-        // works
+        // pinModeFast(DP1, INPUT);
+        // pinModeFast(DP2, INPUT);
+        // pinModeFast(DP4, INPUT);
+        // pinModeFast(DP8, INPUT);
+        /*
+                // set_keyboard_digit(4, true);
+                digitalWriteFast(LOAD_E_KB, LOW);
+                digitalWriteFast(KB_SIGN_E, LOW);
+                // digitalWriteFast(DEFEAT_HOLD, LOW);
+                // step(LOAD);
+                // step(DISP);
+                // wait_for_input();
+                step(LOAD);
+                // step(DISP);
+                wait_for_input();
+
+                set_keyboard_digit(2, true);
+                step(LOAD);
+                // step(DISP);
+                wait_for_input();
+
+                digitalWriteFast(LOAD_E_KB, LOW);
+                digitalWriteFast(KB_SIGN_E, LOW);
+                step(LOAD);
+                // step(DISP);
+                wait_for_input();
+
+                set_keyboard_digit(3, true);
+                step(LOAD);
+                // step(DISP);
+                wait_for_input();
+        */
+
+        // works, but does not allow setting of Y?
         // step(CLEAR_XYZ);
 
         // works
@@ -215,28 +269,76 @@ void setup() {
 
         // works with parser
         // seems decimal point is 1 position to the left in real life
-        prepare_ext_value("12.65e1");
+        // prepare_ext_value("13.00e1");
+        // step(SWAP_EXT_X);
+        // step(DISP);
+        // wait_for_input();
+
+        // does not work
+        // prepare_ext_value("7.00e1");
+        // step(MOVE_EXT_X_Y);
+        // step(DISP);
+        // wait_for_input();
+        // digitalWriteFast(REMOTE_AB, LOW);
+        // step(MODULE);
+        // step(DISP);
+        // wait_for_input();
+
+        // works
+        prepare_ext_value("7.00e1");
         step(SWAP_EXT_X);
         step(DISP);
         wait_for_input();
 
-        step(SWAP_X_Y);
+        step(SWAP_INT_X);
         step(DISP);
         wait_for_input();
 
-        prepare_ext_value("12.65e1");
-        step(SWAP_EXT_X);
-        step(DISP);
-        wait_for_input();
-
-        // this does not work
-        step(DIVIDE);
+        step(SWAP_INT_X);
         step(DISP);
         wait_for_input();
 
         // does not work
-        // step(SQRT);
+        // step(SWAP_INT_X);
         // step(DISP);
+        // wait_for_input();
+
+        // does not work
+        // step(SWAP_INT_X);
+        // step(DISP);
+        // wait_for_input();
+
+        // this works
+        // Serial.println("TEN_X");
+        // step(TEN_X);
+        // step(DISP);
+        // wait_for_input();
+
+        // step(SWAP_X_Y);
+        // step(DISP);
+        // wait_for_input();
+
+        // this does not work?
+        //  Serial.println("DIVIDE_TEN_X");
+        //  step(DIVIDE_X_10);
+        //  step(DISP);
+        //  wait_for_input();
+
+        // this works
+        // Serial.println("ADD");
+        // step(ONE_DIV_X);
+        // step(DISP);
+        // wait_for_input();
+
+        // this does something?
+        // Serial.println("DIVIDE");
+        // step(DIVIDE);
+        // step(DISP);
+
+        // this results in error
+        // step(SQRT_X);
+        // step(DISP);
+        // wait_for_input();
 
         // does not work
         // set_keyboard_digit(2, true);
@@ -272,8 +374,6 @@ void setup() {
 
 bool opcode_ext(uint8_t opcode) {
     switch (opcode) {
-        case SWAP_INT_X:
-        case MOVE_INT_X_Y:
         case SWAP_EXT_X:
         case MOVE_EXT_X_Y:
             return true;
@@ -389,9 +489,9 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     Serial.println();
 }
 // accepts input in the form of "-?d+.d+e-?d", like -5.4e-3
-void prepare_ext_value(char *input) {
+void prepare_ext_value(char* input) {
     uint8_t len_input = strlen(input);
-    char *cpy_input = (char *)malloc(sizeof(char) * len_input);
+    char* cpy_input = (char*)malloc(sizeof(char) * len_input);
     strcpy(cpy_input, input);
     uint8_t exponent = 0;
     uint8_t tmp_ext_value[13] = {0};
@@ -404,7 +504,7 @@ void prepare_ext_value(char *input) {
         // decimal sign is positive
         tmp_ext_value[12] |= 1;
     }
-    char *decimal = strtok(cpy_input, ".");
+    char* decimal = strtok(cpy_input, ".");
     uint8_t len_decimal = strlen(decimal);
     if (len_decimal == 0) {
         tmp_ext_value[10] = 0;
@@ -415,7 +515,7 @@ void prepare_ext_value(char *input) {
         exponent += max(len_decimal - 2, 0);
     }
     // capture fraction
-    char *fraction = strtok(NULL, "e");
+    char* fraction = strtok(NULL, "e");
     unsigned long val = strtoul(fraction, NULL, 10);
     // reverse number to correct for mantissa behavior (10s are bigger in value than 100s behind .)
     unsigned long rev_val = 0;
@@ -441,7 +541,7 @@ void prepare_ext_value(char *input) {
     tmp_ext_value[8] = rev_val % 10;
 
     // remaining characters are exponent
-    char *sign_exp = strtok(NULL, "");
+    char* sign_exp = strtok(NULL, "");
     if (*sign_exp == '-') {
         // exponent sign is negative
         tmp_ext_value[12] &= ~4;
@@ -479,6 +579,10 @@ void step(uint8_t opcode) {
     bool ext = opcode_ext(opcode);
     uint8_t ctr = 0;
     // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
+    pinModeFast(SQ1, OUTPUT);
+    pinModeFast(SQ2, OUTPUT);
+    pinModeFast(SQ4, OUTPUT);
+    pinModeFast(SQ8, OUTPUT);
     cli();
     // catch rising edge of clock
     while (digitalReadFast(EXT_CLK)) {
@@ -528,6 +632,10 @@ void step(uint8_t opcode) {
         }
         ext_recv[ctr] = ((PINK));
         PORTF = 0xF;
+        pinModeFast(SQ1, INPUT);
+        pinModeFast(SQ2, INPUT);
+        pinModeFast(SQ4, INPUT);
+        pinModeFast(SQ8, INPUT);
     }
     while (!((PINC) & (4UL))) {
     }
@@ -538,6 +646,7 @@ void step(uint8_t opcode) {
         }
         print_vals(ext_value, ext_recv);
     }
+    delay(10);
     //  reset state
     //  cannot yet access val & recv here without impacting performance during transmit and read
     digitalWriteFast(KB_SIGN_E, LOW);
@@ -546,10 +655,6 @@ void step(uint8_t opcode) {
     digitalWriteFast(KD2, HIGH);
     digitalWriteFast(KD4, HIGH);
     digitalWriteFast(KD8, HIGH);
-    digitalWriteFast(SQ1, HIGH);
-    digitalWriteFast(SQ2, HIGH);
-    digitalWriteFast(SQ4, HIGH);
-    digitalWriteFast(SQ8, HIGH);
     digitalWriteFast(EXT_PROG_A, HIGH);
     digitalWriteFast(EXT_PROG_B, HIGH);
     digitalWriteFast(EXT_PROG_C, HIGH);
@@ -558,42 +663,6 @@ void step(uint8_t opcode) {
 }
 void loop() {
     // put your main code here, to run repeatedly:
-    char c = Serial.read();
-    if (!external_module_enabled()) {
-        // do certain things
-        return;
-    }
-    switch (c) {
-        case '\r':
-        case '\n':
-        default:
-            Serial.println("do nothing");
-            return;
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-        case '0':
-            // load character
-            // write_character(c);
-            break;
-    }
-}
-
-void write_character(char c) {
-    uint8_t val = atoi(&c);
-    // set_opcode(LOAD);
-    digitalWriteFast(DEFEAT_HOLD, LOW);
-    digitalWriteFast(EXT_PROG_A, HIGH);
-    digitalWriteFast(EXT_PROG_B, LOW);
-    digitalWriteFast(EXT_PROG_C, LOW);
-    digitalWriteFast(EXT_PROG_D, HIGH);
-    digitalWriteFast(EXT_PROG_E, LOW);
 }
 
 bool external_module_enabled() {
@@ -615,21 +684,6 @@ void select_module_input(bool A) {
         digitalWriteFast(REMOTE_AB, HIGH);
     }
 }
-
-void write_ext_register(uint8_t value) {
-}
-
-void write_pin(IOpins_t pin, bool value) {
-    if (pin.mode == INPUT) {
-        Serial.println("Pin marked as input");
-        return;
-    }
-    if (pin.mode == OUTPUT_OC) {
-        pinModeFast(pin.number, OUTPUT);
-    }
-    // cannot set pinModeFast back until clockcycle
-}
-
 void wait_for_input() {
     while (Serial.available() == 0) {
         delay(1);
