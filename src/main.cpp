@@ -78,6 +78,7 @@ enum _exponents {
 
 #define X 10
 enum _pins {
+    DEBUG_PIN = 2,
     _LOAD_E_KB = 22,  // pin 1, next load number on KD-lines is exponent
     // used in commands SWAP_EXT_X and MOVE_EXT_X_Y
     // these pins are purposefully set to A0-A3 as they are the first 4 pins of port-F, which is used to send the 13 digit number to the counter.
@@ -131,8 +132,9 @@ typedef struct {
     uint8_t mode;
 } IOpins_t;
 
-#define NO_PINS 38
+#define NO_PINS 39
 IOpins_t pin[NO_PINS] = {
+    {DEBUG_PIN, OUTPUT},
     {_LOAD_E_KB, OUTPUT},
     {_SQ1, OUTPUT_OC},
     {_SQ2, OUTPUT_OC},
@@ -191,7 +193,7 @@ uint8_t ext_recv[14] = {0};
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
-    Serial.println("St");
+    Serial.println("Starting HP 5375A keyboard");
 
     for (int i = 0; i < NO_PINS; i++) {
         pinMode(pin[i].number, pin[i].mode);
@@ -199,21 +201,24 @@ void setup() {
             digitalWrite(pin[i].number, HIGH);
         }
     }
+    digitalWriteFast(DEBUG_PIN, LOW);
     // set full K register (EXT_S1-EXT_S8) to input
     // DDRK = 0x0;
     digitalWriteFast(_LOAD_E_KB, HIGH);
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
     // this messes up the dot on all operations
-    // digitalWriteFast(DP1, LOW);
-    // digitalWriteFast(_DP2, HIGH);
-    // digitalWriteFast(_DP4, HIGH);
-    // digitalWriteFast(DP8, LOW);
-    // digitalWriteFast(_DP_LATCH, HIGH);
+    digitalWriteFast(DP1, HIGH);
+    digitalWriteFast(_DP2, HIGH);
+    digitalWriteFast(_DP4, HIGH);
+    digitalWriteFast(DP8, HIGH);
+    digitalWriteFast(_DP_LATCH, HIGH);
+
     for (int i = 0; i < 13; i++) {
         ext_value[i] = ~ext_value[i];
     }
     int i = 0;
+    delay(1);
     while (true) {
         // does not work?
         // step(CLEAR_X);
@@ -272,7 +277,8 @@ void setup() {
 
         // works, but does not allow setting of Y?
         Serial.println("CLEAR_XYZ");
-        step(CLEAR_XYZ);
+        step(CLEAR_X);
+        step(DISP);  // should display 000 000 000 000 (no DP)
 
         // works
         // step(MODULE);
@@ -282,11 +288,11 @@ void setup() {
 
         // works with parser
         // seems decimal point is 1 position to the left in real life
-        Serial.println("prepare_ext_value -1.35e0 & display");
-        prepare_ext_value("-1.2345678912e1");
-        step(SWAP_EXT_X);
-        step(DISP);
-        wait_for_input();
+        // Serial.println("prepare_ext_value -1.35e0 & display");
+        // prepare_ext_value("-12.345678912e1");
+        // step(SWAP_EXT_X);
+        // step(DISP);
+        // wait_for_input();
 
         // does not work
         // prepare_ext_value("7.00e1");
@@ -298,12 +304,12 @@ void setup() {
         // step(DISP);
         // wait_for_input();
 
-        // works, but negated
-        Serial.println("prepare_ext_value 70k & display");
-        prepare_ext_value("7.00e3");
-        step(SWAP_EXT_X);
-        step(DISP);
-        wait_for_input();
+        // works, also shifted once
+        // Serial.println("prepare_ext_value 70k & display");
+        // prepare_ext_value("7.00e3");
+        // step(SWAP_EXT_X);
+        // step(DISP);
+        // wait_for_input();
 
         // step(SWAP_INT_X);
         // step(DISP);
@@ -356,9 +362,20 @@ void setup() {
         // wait_for_input();
 
         // does not work
-        // set_keyboard_digit(2, true);
+        wait_for_input();
+        Serial.println("set_keyboard_digit 2");
+        // set_keyboard_digit(3, true);
+        // every step LOAD adds 1 to the exponent (starting at 10MHz, going to 100 MHz, 1 GHz etc.), not respecting the KD lines
+        // Value of KD lines or E_KB sign or exponent is not respected, but why?
         // step(LOAD);
-
+        // step(LOAD);
+        // ABCDE
+        // LHLLH
+        // LHLLH --> opcode is OK
+        wait_for_input();
+        step(DISP);
+        delay(1000);
+        step(DISP);
         // does not work
         // set_keyboard_exponent(1, false);
         // step(LOAD);
@@ -371,7 +388,7 @@ void setup() {
         // step(LOAD);
 
         // works
-        step(DISP);
+        // step(DISP);
         wait_for_input();
         // does not produce the correct result
         // step(SQRT_X);
@@ -424,6 +441,7 @@ void set_opcode(uint8_t opcode) {
     } else {
         digitalWriteFast(_EXT_PROG_E, HIGH);
     }
+    Serial.println("        EDCBA");
     Serial.print("opcode: ");
     Serial.print(!((opcode >> 4) & 1));
     Serial.print(!((opcode >> 3) & 1));
@@ -477,11 +495,18 @@ void set_keyboard_exponent(uint8_t digit, bool sign) {
 
 void set_negative() {
     digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
-    step(LOAD);
-    step(LOAD);
+    // step(LOAD);
+    // step(LOAD);
 }
 
 void set_keyboard_digit(uint8_t digit, bool sign) {
+    pinModeFast(_KD1, OUTPUT);
+    pinModeFast(_KD2, OUTPUT);
+    pinModeFast(_KD4, OUTPUT);
+    pinModeFast(_KD8, OUTPUT);
+    digitalWriteFast(_DP_LATCH, HIGH);
+    digitalWriteFast(KB_SIGN_E, HIGH);
+    // -8421BCD, should that be double negated?
     if ((digit & 1)) {
         digitalWriteFast(_KD1, LOW)
     } else {
@@ -579,7 +604,7 @@ void prepare_ext_value(char* input) {
     sprintf(tmp, "%i %i %i %i %i %i %i %i %i %i %i %i %i", tmp_ext_value[0], tmp_ext_value[1], tmp_ext_value[2], tmp_ext_value[3], tmp_ext_value[4], tmp_ext_value[5], tmp_ext_value[6], tmp_ext_value[7], tmp_ext_value[8], tmp_ext_value[9], tmp_ext_value[10], tmp_ext_value[11], tmp_ext_value[12]);
     Serial.print("Prepare val: ");
     Serial.println(tmp);
-    Serial.println("           LSB                 .  ");
+    Serial.println("           LSB                .  ");
     // negate value to make -8421 BCD representation
     for (int i = 0; i < 13; i++) {
         tmp_ext_value[i] = ~tmp_ext_value[i];
@@ -646,6 +671,7 @@ void step(uint8_t opcode) {
         // with -OFast, we get all instructions duplicated 13 times to skip the while loop
         // The following takes 10 instructions
         while (ctr < 13) {
+            // TODO: check if this is OK
             ext_recv[ctr] = ((PINK));
             PORTF = ext_value[ctr++];
             __asm__("nop\n\t");
@@ -658,16 +684,27 @@ void step(uint8_t opcode) {
             __asm__("nop\n\t");
             __asm__("nop\n\t");
         }
+        // TODO: check if this timing is OK
         ext_recv[ctr] = ((PINK));
         PORTF = 0xF;
-        pinModeFast(_SQ1, OUTPUT_OC);
-        pinModeFast(_SQ2, OUTPUT_OC);
-        pinModeFast(_SQ4, OUTPUT_OC);
-        pinModeFast(_SQ8, OUTPUT_OC);
-    }
-    while (!((PINC) & (4UL))) {
+        __asm__("nop\n\t");
+        __asm__("nop\n\t");
+    } else {
+        // wait for rising edge of EXT_STEP_COMPLETE, only in NON EXT mode,
+        // EXT_STEP_COMPLETE is used by counter in EXT opcodes, but we are not fast enough to catch it
+
+        // actually , EXT_STEP_COMPLETE is on PD2
+        // TODO: verify the keyboard lines are held properly until EXT_STEP_COMPLETE
+        digitalWriteFast(DEBUG_PIN, HIGH);
+        // I think we cannot detect the ext step complete pulse (0.5us) width
+
+        // while (!digitalReadFast(EXT_STEP_COMPL)) {
+        // }
+        delayMicroseconds(20);
+        digitalWriteFast(DEBUG_PIN, LOW);
     }
     sei();
+    // TODO: check if this works properly
     if (ext) {
         for (int i = 0; i < 13; i++) {
             ext_recv[i] = ext_recv[i + 1] & 0xF;
@@ -677,14 +714,17 @@ void step(uint8_t opcode) {
     delay(10);
     //  reset state
     //  cannot yet access val & recv here without impacting performance during transmit and read
-    digitalWriteFast(KB_SIGN_E, LOW);
-    digitalWriteFast(_LOAD_E_KB, HIGH);
+    // digitalWriteFast(KB_SIGN_E, LOW);
+    // digitalWriteFast(_LOAD_E_KB, HIGH);
 
-    pinModeFast(_KD1, OUTPUT_OC);
-    pinModeFast(_KD2, OUTPUT_OC);
-    pinModeFast(_KD4, OUTPUT_OC);
-    pinModeFast(_KD8, OUTPUT_OC);
-
+    // pinModeFast(_KD1, OUTPUT_OC);
+    // pinModeFast(_KD2, OUTPUT_OC);
+    // pinModeFast(_KD4, OUTPUT_OC);
+    // pinModeFast(_KD8, OUTPUT_OC);
+    pinModeFast(_SQ1, OUTPUT_OC);
+    pinModeFast(_SQ2, OUTPUT_OC);
+    pinModeFast(_SQ4, OUTPUT_OC);
+    pinModeFast(_SQ8, OUTPUT_OC);
     digitalWriteFast(_EXT_PROG_A, HIGH);
     digitalWriteFast(_EXT_PROG_B, HIGH);
     digitalWriteFast(_EXT_PROG_C, HIGH);
