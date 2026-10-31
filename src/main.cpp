@@ -26,7 +26,7 @@ enum _opcodes {
     MOVE_SQS_X_Y = 18,
     MOVE_INT_X_Y = 19,
     TWO_X = 20,
-    SWAP_X_Y = 21,   // works
+    SWAP_X_Y = 21,   // works -- not anymore?
     CLEAR_X = 22,    // works
     MOVE_X_Y = 23,
     SWAP_PI_X = 24,
@@ -94,22 +94,21 @@ enum _pins {
     _KD8 = 29,       // pin 10, BCD line 8 from KB
     _DP_LATCH = 31,  // pin 11, decimal point latch, set low during LOAD and fixes DP at that point. remains low for subsequent characters. High when exponent is loaded
     // Control decimal point lamps
-    DP1 = 33,          // pin 12, decimal point 1
-    _DP2 = 35,         // pin 13, decimal point 2
+    DP1 = 33,                // pin 12, decimal point 1
+    _DP2 = 35,               // pin 13, decimal point 2
     _DP4 = 37,
     DP8 = 39,
     // Program codes. Code must be held from EXT_START to when EXT_STEP_COMPLETE is received
-    _EXT_PROG_A = 45,  // pin 16, program code A, LSB
-    _EXT_PROG_B = 47,  // pin 17, program code B
-    _EXT_PROG_C = 49,  // pin 19, program code C
-    _EXT_PROG_D = 51,  // pin 20, program code D
-    _EXT_PROG_E = 53,  // pin 21, program code E, MSB
+    _EXT_PROG_A = 45,        // pin 16, program code A, LSB
+    _EXT_PROG_B = 47,        // pin 17, program code B
+    _EXT_PROG_C = 49,        // pin 19, program code C
+    _EXT_PROG_D = 51,        // pin 20, program code D
+    _EXT_PROG_E = 53,        // pin 21, program code E, MSB
 
-    REMOTE_AB = X,     // pin 18, select module input A or B, high for A, low for B
-    _EXT_START = 52,   // pin 22, EXT_START, low to start operation, pulse-synchronous with EXT_CLK, EXT_STEP_COMPLETE goes low when operation is complete
-    _EXT_RESET = 50,   // pin 23, EXT_RESET, set low by mainframe when manual reset
-    // TODO: understand this one
-    _EXT_SHIFT13 = 48,       // pin 24, used for shifting storageword, 16us long and synchronous with EXT_CLK
+    REMOTE_AB = X,           // pin 18, select module input A or B, high for A, low for B
+    _EXT_START = 52,         // pin 22, EXT_START, low to start operation, pulse-synchronous with EXT_CLK, EXT_STEP_COMPLETE goes low when operation is complete
+    _EXT_RESET = 50,         // pin 23, EXT_RESET, set low by mainframe when manual reset
+    _EXT_SHIFT13 = 48,       // pin 24, used for shifting storageword, coming from counter, 16us long and synchronous with EXT_CLK
     EXT_STEP_COMPL = 19,     // pin 25, counter is ready to accept commands again.
     _SW_RST = X,             // pin 26, active low, reset the counter from keyboard
     EXT_CLK = 18,            // pin 27, Clock to be used, 1MHz with 50% duty cycle
@@ -131,6 +130,46 @@ typedef struct {
     uint8_t number;
     uint8_t mode;
 } IOpins_t;
+
+// typedef struct {
+//     uint8_t opcode;
+//     char* name;
+// } Opcode_t;
+
+// #define NO_OPCODES 31
+
+// Opcode_t opc[NO_OPCODES] = {
+//     {NORMALIZE, "NORMALIZE"},
+//     {MODULE, "MODULE"},
+//     {PLUG_IN, "PLUG_IN"},
+//     {SQRT_X, "SQRT_X"},
+//     {SELF_CHECK, "SELF_CHECK"},
+//     {CALIBRATE, "CALIBRATE"},
+//     {DISP, "DISP"},
+//     {TEN_X, "TEN_X"},
+//     {ADD, "ADD"},
+//     {SUBTRACT, "SUBTRACT"},
+//     {ONE_DIV_X, "ONE_DIV_X"},
+//     {LOAD, "LOAD"},
+//     {DIVIDE, "DIVIDE"},
+//     {MULTIPLY, "MULTIPLY"},
+//     {SWAP_SQS_X, "SWAP_SQS_X"},
+//     {SWAP_INT_X, "SWAP_INT_X"},
+//     {MOVE_SQS_X_Y, "MOVE_SQS_X_Y"},
+//     {MOVE_INT_X_Y, "MOVE_INT_X_Y"},
+//     {TWO_X, "TWO_X"},
+//     {SWAP_X_Y, "SWAP_X_Y"},
+//     {CLEAR_X, "CLEAR_X"},
+//     {MOVE_X_Y, "MOVE_X_Y"},
+//     {SWAP_PI_X, "SWAP_PI_X"},
+//     {SWAP_EXT_X, "SWAP_EXT_X"},
+//     {MOVE_PI_X_Y, "MOVE_PI_X_Y"},
+//     {MOVE_EXT_X_Y, "MOVE_EXT_X_Y"},
+//     {DIVIDE_X_10, "DIVIDE_X_10"},
+//     {SWAP_Z_X, "SWAP_Z_X"},
+//     {CLEAR_XYZ, "CLEAR XYZ"},
+//     {MOVE_Z_X_Y, "MOVE_Z_X_Y"},
+// };
 
 #define NO_PINS 39
 IOpins_t pin[NO_PINS] = {
@@ -277,7 +316,7 @@ void setup() {
 
         // works, but does not allow setting of Y?
         Serial.println("CLEAR_XYZ");
-        step(CLEAR_X);
+        step(CLEAR_XYZ);
         step(DISP);  // should display 000 000 000 000 (no DP)
 
         // works
@@ -306,13 +345,23 @@ void setup() {
 
         // works, also shifted once
         // Serial.println("prepare_ext_value 70k & display");
-        // prepare_ext_value("7.00e3");
-        // step(SWAP_EXT_X);
+        Serial.println("prepare 7");
+        prepare_ext_value("-17.101010101e3");
+        // prepare_ext_value("-17.111111111e3");
+        step(SWAP_EXT_X);
+        step(DISP);
+        wait_for_input();
+
+        Serial.println("prepare 8");
+        prepare_ext_value("-18.101010101e3");
+        // prepare_ext_value("-18.111111111e3");
+        step(SWAP_EXT_X);
+        step(DISP);
+        wait_for_input();
+        // step(SWAP_X_Y);
         // step(DISP);
         // wait_for_input();
-
         // step(SWAP_INT_X);
-        // step(DISP);
         // wait_for_input();
 
         // step(SWAP_INT_X);
@@ -362,8 +411,8 @@ void setup() {
         // wait_for_input();
 
         // does not work
-        wait_for_input();
-        Serial.println("set_keyboard_digit 2");
+        // wait_for_input();
+        // Serial.println("set_keyboard_digit 2");
         // set_keyboard_digit(3, true);
         // every step LOAD adds 1 to the exponent (starting at 10MHz, going to 100 MHz, 1 GHz etc.), not respecting the KD lines
         // Value of KD lines or E_KB sign or exponent is not respected, but why?
@@ -372,10 +421,7 @@ void setup() {
         // ABCDE
         // LHLLH
         // LHLLH --> opcode is OK
-        wait_for_input();
-        step(DISP);
-        delay(1000);
-        step(DISP);
+
         // does not work
         // set_keyboard_exponent(1, false);
         // step(LOAD);
@@ -389,7 +435,6 @@ void setup() {
 
         // works
         // step(DISP);
-        wait_for_input();
         // does not produce the correct result
         // step(SQRT_X);
 
@@ -417,7 +462,7 @@ void set_opcode(uint8_t opcode) {
     // digital write fast needs a constant expression to compile
     // logic is inverted
     if ((opcode & 1)) {
-        digitalWriteFast(_EXT_PROG_A, LOW)
+        digitalWriteFast(_EXT_PROG_A, LOW);
     } else {
         digitalWriteFast(_EXT_PROG_A, HIGH);
     }
@@ -465,7 +510,7 @@ void set_keyboard_exponent(uint8_t digit, bool sign) {
     }
 
     if ((digit & 1)) {
-        digitalWriteFast(_KD1, LOW)
+        digitalWriteFast(_KD1, LOW);
     } else {
         digitalWriteFast(_KD1, HIGH);
     }
@@ -508,7 +553,7 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     digitalWriteFast(KB_SIGN_E, HIGH);
     // -8421BCD, should that be double negated?
     if ((digit & 1)) {
-        digitalWriteFast(_KD1, LOW)
+        digitalWriteFast(_KD1, LOW);
     } else {
         digitalWriteFast(_KD1, HIGH);
     }
@@ -668,24 +713,23 @@ void step(uint8_t opcode) {
         // await for first falling edge of _EXT_SHIFT13, wait while it is high
         while (((PINL) & (2UL))) {
         }
+        ext_recv[0] = ((PINK));
         // with -OFast, we get all instructions duplicated 13 times to skip the while loop
         // The following takes 10 instructions
         while (ctr < 13) {
-            // TODO: check if this is OK
-            ext_recv[ctr] = ((PINK));
             PORTF = ext_value[ctr++];
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
+            ext_recv[ctr - 1] = ((PINK));
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
             __asm__("nop\n\t");
         }
-        // TODO: check if this timing is OK
-        ext_recv[ctr] = ((PINK));
+        // reset _SQ-pins to 0's
         PORTF = 0xF;
         __asm__("nop\n\t");
         __asm__("nop\n\t");
@@ -706,9 +750,6 @@ void step(uint8_t opcode) {
     sei();
     // TODO: check if this works properly
     if (ext) {
-        for (int i = 0; i < 13; i++) {
-            ext_recv[i] = ext_recv[i + 1] & 0xF;
-        }
         print_vals(ext_value, ext_recv);
     }
     delay(10);
