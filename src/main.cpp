@@ -8,34 +8,34 @@
 /* Operation codes */
 enum _opcodes {
     NORMALIZE = 0,
-    MODULE = 2,      // works
+    MODULE = 2,         // works
     PLUG_IN = 3,
-    SQRT_X = 5,
-    SELF_CHECK = 6,  // works
+    SQRT_X = 5,         // does not work!
+    SELF_CHECK = 6,     // works
     CALIBRATE = 7,
-    DISP = 8,        // works
-    TEN_X = 9,
-    ADD = 10,
-    SUBTRACT = 11,
+    DISP = 8,           // works
+    TEN_X = 9,          // works
+    ADD = 10,           // works
+    SUBTRACT = 11,      // works
     ONE_DIV_X = 12,
-    LOAD = 13,
-    DIVIDE = 14,
-    MULTIPLY = 15,
+    LOAD = 13,          // works
+    DIVIDE = 14,        // works
+    MULTIPLY = 15,      // works
     SWAP_SQS_X = 16,
     SWAP_INT_X = 17,
     MOVE_SQS_X_Y = 18,
     MOVE_INT_X_Y = 19,
     TWO_X = 20,
-    SWAP_X_Y = 21,   // works -- not anymore?
-    CLEAR_X = 22,    // works
-    MOVE_X_Y = 23,
-    SWAP_PI_X = 24,
-    SWAP_EXT_X = 25,
-    MOVE_PI_X_Y = 26,
-    MOVE_EXT_X_Y = 27,
-    DIVIDE_X_10 = 28,
+    SWAP_X_Y = 21,      // works
+    CLEAR_X = 22,       // works
+    COPY_X_Y = 23,      // works
+    SWAP_PI_X = 24,     //
+    SWAP_EXT_X = 25,    // works
+    MOVE_PI_X_Y = 26,   //
+    MOVE_EXT_X_Y = 27,  // works
+    DIVIDE_X_10 = 28,   // works
     SWAP_Z_X = 29,
-    CLEAR_XYZ = 30,  // works
+    CLEAR_XYZ = 30,     // works
     MOVE_Z_X_Y = 31,
 
 };
@@ -75,6 +75,7 @@ enum _exponents {
 // }
 
 // all logic works on falling edge!
+uint8_t EXT_PROG_C_EXTRA = 8;
 
 #define X 10
 enum _pins {
@@ -86,7 +87,7 @@ enum _pins {
     _SQ2 = A1,       // pin 3, BCD line 2, b register (KB) to x register (Counter)
     _SQ4 = A2,       // pin 4, BCD line 4, b register (KB) to x register (Counter)
     _SQ8 = A3,       // pin 5, BCD line 8, b register (KB) to x register (Counter)
-    KB_SIGN_E = 32,  // pin 6, polarity of exponent being loded from keyboard
+    KB_SIGN_E = 30,  // pin 6, polarity of exponent being loded from keyboard
     // Used in LOAD commands input is -8421 BCD and -8421 binary for exponent
     _KD1 = 23,       // pin 7, BCD line 1 from KB
     _KD2 = 25,       // pin 8, BCD line 2 from KB
@@ -94,26 +95,26 @@ enum _pins {
     _KD8 = 29,       // pin 10, BCD line 8 from KB
     _DP_LATCH = 31,  // pin 11, decimal point latch, set low during LOAD and fixes DP at that point. remains low for subsequent characters. High when exponent is loaded
     // Control decimal point lamps
-    DP1 = 33,                // pin 12, decimal point 1
-    _DP2 = 35,               // pin 13, decimal point 2
+    DP1 = 33,                 // pin 12, decimal point 1
+    _DP2 = 35,                // pin 13, decimal point 2
     _DP4 = 37,
     DP8 = 39,
     // Program codes. Code must be held from EXT_START to when EXT_STEP_COMPLETE is received
-    _EXT_PROG_A = 45,        // pin 16, program code A, LSB
-    _EXT_PROG_B = 47,        // pin 17, program code B
-    _EXT_PROG_C = 49,        // pin 19, program code C
-    _EXT_PROG_D = 51,        // pin 20, program code D
-    _EXT_PROG_E = 53,        // pin 21, program code E, MSB
+    _EXT_PROG_A = 45,         // pin 16, program code A, LSB
+    _EXT_PROG_B = 47,         // pin 17, program code B
+    _EXT_PROG_C = 49,         // pin 19, program code C
+    _EXT_PROG_D = 51,         // pin 20, program code D
+    _EXT_PROG_E = 53,         // pin 21, program code E, MSB
 
-    REMOTE_AB = X,           // pin 18, select module input A or B, high for A, low for B
-    _EXT_START = 52,         // pin 22, EXT_START, low to start operation, pulse-synchronous with EXT_CLK, EXT_STEP_COMPLETE goes low when operation is complete
-    _EXT_RESET = 50,         // pin 23, EXT_RESET, set low by mainframe when manual reset
-    _EXT_SHIFT13 = 48,       // pin 24, used for shifting storageword, coming from counter, 16us long and synchronous with EXT_CLK
-    EXT_STEP_COMPL = 19,     // pin 25, counter is ready to accept commands again.
-    _SW_RST = X,             // pin 26, active low, reset the counter from keyboard
-    EXT_CLK = 18,            // pin 27, Clock to be used, 1MHz with 50% duty cycle
-    _EXT_STORE = X,          // pin 30, low by counter when executing SWAP_EXT_X or MOVE_EXT_X_Y,
-    _PRESET_SIGN_X_NEG = X,  // pin 31, negative pulse will set the sign of the x-register mantissa to a negative value
+    REMOTE_AB = X,            // pin 18, select module input A or B, high for A, low for B
+    _EXT_START = 52,          // pin 22, EXT_START, low to start operation, pulse-synchronous with EXT_CLK, EXT_STEP_COMPLETE goes low when operation is complete
+    _EXT_RESET = 50,          // pin 23, EXT_RESET, set low by mainframe when manual reset
+    _EXT_SHIFT13 = 48,        // pin 24, used for shifting storageword, coming from counter, 16us long and synchronous with EXT_CLK
+    EXT_STEP_COMPL = 19,      // pin 25, counter is ready to accept commands again.
+    _SW_RST = X,              // pin 26, active low, reset the counter from keyboard
+    EXT_CLK = 18,             // pin 27, Clock to be used, 1MHz with 50% duty cycle
+    _EXT_STORE = X,           // pin 30, low by counter when executing SWAP_EXT_X or MOVE_EXT_X_Y,
+    _PRESET_SIGN_X_NEG = 32,  // pin 31, negative pulse will set the sign of the x-register mantissa to a negative value
     // used in operations SWAP_EXT_X and MOVE_EXT_X_Y, SHIFT_13_EXT pulse train
     EXT_S1 = A8,           // pin 32
     EXT_S2 = A9,
@@ -214,10 +215,13 @@ IOpins_t pin[NO_PINS] = {
     {_DIRTY_ZEROS, INPUT}};
 
 bool opcode_ext(uint8_t opcode);
+bool opcode_load(uint8_t opcode);
 void set_opcode(uint8_t opcode);
 void prepare_ext_value(char* input);
-void set_keyboard_digit(uint8_t digit, bool sign);
-void set_keyboard_exponent(uint8_t exponent, bool sign);
+void enter_minus();
+void enter_dot();
+void enter_keyboard_digit(uint8_t digit);
+void enter_keyboard_exponent(char exponent);
 void print_vals(uint8_t val1[], uint8_t recv1[]);
 void wait_for_input();
 
@@ -228,6 +232,8 @@ void step(uint8_t opcode);
 uint8_t ext_value[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
 // length needs to be 1 longer for correct loading, is corrected later
 uint8_t ext_recv[14] = {0};
+
+uint8_t digits_in_load_seq = 0;
 
 void setup() {
     // put your setup code here, to run once:
@@ -240,6 +246,10 @@ void setup() {
             digitalWrite(pin[i].number, HIGH);
         }
     }
+    // temporary fix for EXT_PROG_C,
+    pinMode(EXT_PROG_C_EXTRA, OUTPUT);
+    digitalWriteFast(EXT_PROG_C_EXTRA, LOW);
+
     digitalWriteFast(DEBUG_PIN, LOW);
     // set full K register (EXT_S1-EXT_S8) to input
     // DDRK = 0x0;
@@ -247,11 +257,11 @@ void setup() {
     digitalWriteFast(KB_SIGN_E, LOW);
     digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
     // this messes up the dot on all operations
-    digitalWriteFast(DP1, HIGH);
-    digitalWriteFast(_DP2, HIGH);
-    digitalWriteFast(_DP4, HIGH);
-    digitalWriteFast(DP8, HIGH);
-    digitalWriteFast(_DP_LATCH, HIGH);
+    // digitalWriteFast(DP1, HIGH);
+    // digitalWriteFast(_DP2, HIGH);
+    // digitalWriteFast(_DP4, HIGH);
+    // digitalWriteFast(DP8, HIGH);
+    // digitalWriteFast(_DP_LATCH, HIGH);
 
     for (int i = 0; i < 13; i++) {
         ext_value[i] = ~ext_value[i];
@@ -259,62 +269,7 @@ void setup() {
     int i = 0;
     delay(1);
     while (true) {
-        // does not work?
-        // step(CLEAR_X);
-        // delay(10);
-        // step(DISP);
-        // wait_for_input();
-        // // pinModeFast(DP1, OUTPUT);
-        // // pinModeFast(_DP2, OUTPUT);
-        // // pinModeFast(_DP4, OUTPUT);
-        // // pinModeFast(DP8, OUTPUT);
-        // digitalWriteFast(_LOAD_E_KB, LOW);
-        // set_keyboard_digit(2, false);
-        // digitalWriteFast(_DEFEAT_HOLD, LOW);
-        // delay(10);
-        // // digitalWriteFast(DP1, HIGH);
-        // // digitalWriteFast(_DP2, HIGH);
-        // // digitalWriteFast(_DP4, LOW);
-        // // digitalWriteFast(DP8, HIGH);
-        // step(LOAD);
-        // wait_for_input();
-        // digitalWriteFast(_DEFEAT_HOLD, HIGH);
-        // continue;
-
-        // pinModeFast(DP1, INPUT);
-        // pinModeFast(_DP2, INPUT);
-        // pinModeFast(_DP4, INPUT);
-        // pinModeFast(DP8, INPUT);
-        /*
-                // set_keyboard_digit(4, true);
-                digitalWriteFast(_LOAD_E_KB, LOW);
-                digitalWriteFast(KB_SIGN_E, LOW);
-                // digitalWriteFast(_DEFEAT_HOLD, LOW);
-                // step(LOAD);
-                // step(DISP);
-                // wait_for_input();
-                step(LOAD);
-                // step(DISP);
-                wait_for_input();
-
-                set_keyboard_digit(2, true);
-                step(LOAD);
-                // step(DISP);
-                wait_for_input();
-
-                digitalWriteFast(_LOAD_E_KB, LOW);
-                digitalWriteFast(KB_SIGN_E, LOW);
-                step(LOAD);
-                // step(DISP);
-                wait_for_input();
-
-                set_keyboard_digit(3, true);
-                step(LOAD);
-                // step(DISP);
-                wait_for_input();
-        */
-
-        // works, but does not allow setting of Y?
+        // works
         Serial.println("CLEAR_XYZ");
         step(CLEAR_XYZ);
         step(DISP);  // should display 000 000 000 000 (no DP)
@@ -328,7 +283,8 @@ void setup() {
         // works with parser
         // seems decimal point is 1 position to the left in real life
         // Serial.println("prepare_ext_value -1.35e0 & display");
-        // prepare_ext_value("-12.345678912e1");
+        // wait_for_input();
+        // prepare_ext_value("-12.3456789e1");
         // step(SWAP_EXT_X);
         // step(DISP);
         // wait_for_input();
@@ -345,26 +301,38 @@ void setup() {
 
         // works, also shifted once
         // Serial.println("prepare_ext_value 70k & display");
-        Serial.println("prepare 7");
-        prepare_ext_value("-17.101010101e3");
-        // prepare_ext_value("-17.111111111e3");
-        step(SWAP_EXT_X);
-        step(DISP);
-        wait_for_input();
 
-        Serial.println("prepare 8");
-        prepare_ext_value("-18.101010101e3");
-        // prepare_ext_value("-18.111111111e3");
-        step(SWAP_EXT_X);
-        step(DISP);
-        wait_for_input();
-        // step(SWAP_X_Y);
+        // Serial.println("prepare 7");
+        // prepare_ext_value("-17.101010101e3");
+        // prepare_ext_value("-17.111111111e3");
+        // prepare_ext_value("80.0e0");
+        // step(SWAP_EXT_X);
+        // step(MOVE_EXT_X_Y);
         // step(DISP);
         // wait_for_input();
-        // step(SWAP_INT_X);
+
+        // Serial.println("prepare 8");
+        // prepare_ext_value("-18.101010101e6");
+        // prepare_ext_value("-18.111111111e3");
+        // prepare_ext_value("20.0e0");
+        // step(SWAP_EXT_X);
+        // step(MOVE_EXT_X_Y);
+        // step(DISP);
         // wait_for_input();
 
-        // step(SWAP_INT_X);
+        // arithmetic in counter
+        // step(ADD);  // works Y + X
+        // step(SUBTRACT);  // works Y - X
+        // step(SQRT_X);  // does not work
+        // step(TEN_X); // works
+        // step(MULTIPLY);  // works
+        // step(DIVIDE);  // works
+        // step(DIVIDE_X_10); //works
+        // step(COPY_X_Y);  // works?
+        // step(DISP);
+        // wait_for_input();
+
+        // step(SWAP_X_Y);  // works
         // step(DISP);
         // wait_for_input();
 
@@ -412,27 +380,27 @@ void setup() {
 
         // does not work
         // wait_for_input();
-        // Serial.println("set_keyboard_digit 2");
-        // set_keyboard_digit(3, true);
-        // every step LOAD adds 1 to the exponent (starting at 10MHz, going to 100 MHz, 1 GHz etc.), not respecting the KD lines
-        // Value of KD lines or E_KB sign or exponent is not respected, but why?
-        // step(LOAD);
+        // wait_for_input();
+        // enter_minus();
+        Serial.println("enter_keyboard_digit 2");
+        enter_dot();
+        wait_for_input();
+        for (int i = 0; i < 3; i++) {
+            enter_keyboard_digit(i);
+            wait_for_input();
+        }
+        enter_keyboard_digit(5);
+        wait_for_input();
+        // finish loading keyboard digit by setting exponent
+        enter_keyboard_exponent('M');
+        // digitalWriteFast(_DEFEAT_HOLD, HIGH);
+        step(DISP);
+        wait_for_input();
+
         // step(LOAD);
         // ABCDE
         // LHLLH
         // LHLLH --> opcode is OK
-
-        // does not work
-        // set_keyboard_exponent(1, false);
-        // step(LOAD);
-        // digitalWriteFast(_DEFEAT_HOLD, LOW);
-        // step(DISP);
-
-        // does not work
-
-        // set_keyboard_exponent(3, true);
-        // step(LOAD);
-
         // works
         // step(DISP);
         // does not produce the correct result
@@ -447,6 +415,10 @@ void setup() {
         i++;
         i %= 16;
     }
+}
+
+bool opcode_load(uint8_t opcode) {
+    return opcode == LOAD;
 }
 
 bool opcode_ext(uint8_t opcode) {
@@ -473,8 +445,10 @@ void set_opcode(uint8_t opcode) {
     }
     if (((opcode >> 2) & 1)) {
         digitalWriteFast(_EXT_PROG_C, LOW);
+        digitalWriteFast(EXT_PROG_C_EXTRA, LOW);
     } else {
         digitalWriteFast(_EXT_PROG_C, HIGH);
+        digitalWriteFast(EXT_PROG_C_EXTRA, HIGH);
     }
     if (((opcode >> 3) & 1)) {
         digitalWriteFast(_EXT_PROG_D, LOW);
@@ -496,13 +470,66 @@ void set_opcode(uint8_t opcode) {
     Serial.println();
 }
 
-void set_keyboard_exponent(uint8_t digit, bool sign) {
+void enter_keyboard_exponent(char digit) {
+    if (digits_in_load_seq == 0) {
+        Serial.println("No digits entered before exponent");
+        return;
+    }
+    bool sign = true;
+    switch (digit) {
+        case 'T':
+            digit = 12;
+            break;
+        case 'G':
+            digit = 9;
+            break;
+        case 'M':
+            digit = 6;
+            break;
+        case 'k':
+            digit = 3;
+            break;
+        case 'm':
+            digit = 3;
+            sign = false;
+            break;
+        case 'u':
+            digit = 6;
+            sign = false;
+            break;
+        case 'n':
+            digit = 9;
+            sign = false;
+            break;
+        case 'p':
+            digit = 12;
+            sign = false;
+            break;
+        case 'f':
+            digit = 15;
+            sign = false;
+            break;
+        case '0':
+            digit = 0;
+            break;
+        case '.':
+            digit = 15;
+            break;
+        default:
+            Serial.println("Invalid exponent");
+            return;
+    }
     pinModeFast(_KD1, OUTPUT);
     pinModeFast(_KD2, OUTPUT);
     pinModeFast(_KD4, OUTPUT);
     pinModeFast(_KD8, OUTPUT);
+    // disable decimal point latch, so that the decimal point is not latched in the display
+    digitalWriteFast(_DP_LATCH, HIGH);
+    // enable load exponent
     digitalWriteFast(_LOAD_E_KB, LOW);
-    delay(100);
+
+    // H = -, sign = false
+    // L = +, sign = true
     if (sign) {
         digitalWriteFast(KB_SIGN_E, LOW);
     } else {
@@ -529,6 +556,13 @@ void set_keyboard_exponent(uint8_t digit, bool sign) {
     } else {
         digitalWriteFast(_KD8, HIGH);
     }
+    step(LOAD);
+    // reset load keyboard signs
+    digitalWriteFast(_LOAD_E_KB, HIGH);
+    digitalWriteFast(KB_SIGN_E, LOW);
+    // also, exponent is last to be loaded, tbc
+    digitalWriteFast(_DEFEAT_HOLD, HIGH);
+    // digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
 
     Serial.print("exponent: ");
     Serial.print(((digit >> 3) & 1));
@@ -537,21 +571,41 @@ void set_keyboard_exponent(uint8_t digit, bool sign) {
     Serial.print((digit & 1));
     Serial.println();
 }
-
-void set_negative() {
-    digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
-    // step(LOAD);
-    // step(LOAD);
+/*
+Need a low pulse on _PRESET_SIGN_X_NEG during a LOAD operation with 0 on KD
+*/
+void enter_minus() {
+    if (digits_in_load_seq == 0) {
+        digitalWriteFast(_PRESET_SIGN_X_NEG, LOW);
+        step(LOAD);
+        digitalWriteFast(_PRESET_SIGN_X_NEG, HIGH);
+    } else {
+        Serial.println("Not first keyboard digit, cannot enter minus");
+    }
+}
+/* Need a low pulse on _PRESET_SIGN_X_NEG during a LOAD operation with 0 on KD
+ */
+void enter_dot() {
+    if (digits_in_load_seq == 0) {
+        // first digit, so load the decimal point
+        enter_keyboard_digit(0);
+    }
+    digitalWriteFast(_DP_LATCH, LOW);
+    // DP lines are not taken?
+    digitalWriteFast(DP1, HIGH);
+    digitalWriteFast(_DP2, HIGH);
+    digitalWriteFast(_DP4, HIGH);
+    digitalWriteFast(DP8, LOW);
 }
 
-void set_keyboard_digit(uint8_t digit, bool sign) {
+void enter_keyboard_digit(uint8_t digit) {
     pinModeFast(_KD1, OUTPUT);
     pinModeFast(_KD2, OUTPUT);
     pinModeFast(_KD4, OUTPUT);
     pinModeFast(_KD8, OUTPUT);
-    digitalWriteFast(_DP_LATCH, HIGH);
-    digitalWriteFast(KB_SIGN_E, HIGH);
-    // -8421BCD, should that be double negated?
+    // digitalWriteFast(_DEFEAT_HOLD, LOW);
+    //  digitalWriteFast(_DP_LATCH, HIGH);
+    //  -8421BCD
     if ((digit & 1)) {
         digitalWriteFast(_KD1, LOW);
     } else {
@@ -572,6 +626,8 @@ void set_keyboard_digit(uint8_t digit, bool sign) {
     } else {
         digitalWriteFast(_KD8, HIGH);
     }
+    digits_in_load_seq += 1;
+    step(LOAD);
     Serial.print("digit: ");
     Serial.print(!((digit >> 3) & 1));
     Serial.print(!((digit >> 2) & 1));
@@ -670,6 +726,9 @@ void print_vals(uint8_t val1[], uint8_t recv1[]) {
 void step(uint8_t opcode) {
     set_opcode(opcode);
     bool ext = opcode_ext(opcode);
+    if (!opcode_load(opcode)) {
+        digits_in_load_seq = 0;
+    }
     uint8_t ctr = 0;
     // {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 1, 1, 1};
     pinModeFast(_SQ1, OUTPUT);
@@ -758,14 +817,17 @@ void step(uint8_t opcode) {
     // digitalWriteFast(KB_SIGN_E, LOW);
     // digitalWriteFast(_LOAD_E_KB, HIGH);
 
-    // pinModeFast(_KD1, OUTPUT_OC);
-    // pinModeFast(_KD2, OUTPUT_OC);
-    // pinModeFast(_KD4, OUTPUT_OC);
-    // pinModeFast(_KD8, OUTPUT_OC);
+    // reset Keyboard Digits to input
+    pinModeFast(_KD1, OUTPUT_OC);
+    pinModeFast(_KD2, OUTPUT_OC);
+    pinModeFast(_KD4, OUTPUT_OC);
+    pinModeFast(_KD8, OUTPUT_OC);
+    // Reset SQ pins to input
     pinModeFast(_SQ1, OUTPUT_OC);
     pinModeFast(_SQ2, OUTPUT_OC);
     pinModeFast(_SQ4, OUTPUT_OC);
     pinModeFast(_SQ8, OUTPUT_OC);
+    // Reset opcode
     digitalWriteFast(_EXT_PROG_A, HIGH);
     digitalWriteFast(_EXT_PROG_B, HIGH);
     digitalWriteFast(_EXT_PROG_C, HIGH);
