@@ -26,13 +26,17 @@ areas. Hitbox coordinates are stored in the KEYS list in source-image pixels.
 
 Serial output
 -------------
-Each click sends one UTF-8 JSON object followed by a newline. For example:
+Each click sends one UTF-8 JSON value followed by a newline. The current UI
+sends the key ID as a JSON string, for example:
+
+    "digit_7"
+
+The firmware also accepts the object format:
 
     {"key":"digit_7","label":"7 / K","kind":"digit","load_program_octal":"15","load_program_edcba":"HLLHL","kd_dcba":"LHHH","exponent_dcba":"LLHH","exponent_label":"K"}
 
-The packet includes semantic key IDs and the corresponding table codes. The
-Arduino firmware must parse this JSON-line protocol, or serial_packet() and
-the write in on_click() must be changed to match an existing firmware parser.
+The object includes the semantic key ID and corresponding table codes. The
+firmware's wait_for_input() parser accepts both formats.
 
 The operation and digit code references come from Table 5-4 in the HP 5375A
 Operating and Service Manual. The image is a reconstructed composite from

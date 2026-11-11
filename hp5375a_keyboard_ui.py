@@ -11,11 +11,9 @@ Run with a serial port:
     python hp5375a_keyboard_ui.py --port COM5 --baud 115200
     python hp5375a_keyboard_ui.py --port /dev/ttyACM0 --baud 115200
 
-Serial protocol: one JSON object per key press, followed by a newline. Each
-event includes the physical key id, the keyboard octal code / EDCBA pattern
-from the 5375A operation-code table when applicable, and digit or exponent
-data for entry keys. Change serial_packet() if the Arduino firmware expects a
-different format.
+Serial protocol: one JSON value per key press, followed by a newline. The
+current serial_packet() sends the key ID as a JSON string; the firmware also
+accepts the object format containing a "key" field.
 """
 
 from __future__ import annotations
@@ -85,30 +83,30 @@ KEYS = [
 
     # A/B/C/Z and X/Y register-transfer column.
     operation("a_swap_x", "a ↔ x", (457, 360, 565, 460), "21", "LHHHL"),
-    operation("a_copy_xy", "a, x/y ↓", (566, 360, 675, 460), "23", "LHHLL"),
+    operation("a_copy_xy", "a ↓ x,y ", (566, 360, 675, 460), "23", "LHHLL"),
     operation("b_swap_x", "b ↔ x", (457, 462, 565, 562), "31", "LLHHL"),
-    operation("b_copy_xy", "b, x/y ↓", (566, 462, 675, 562), "33", "LLHLL"),
+    operation("b_copy_xy", "b ↓ xy", (566, 462, 675, 562), "33", "LLHLL"),
     operation("c_swap_x", "c ↔ x", (457, 565, 565, 668), "30", "LLHHH"),
-    operation("c_copy_xy", "c, x/y ↓", (566, 565, 675, 668), "32", "LLHLH"),
+    operation("c_copy_xy", "c ↓ xy", (566, 565, 675, 668), "32", "LLHLH"),
     operation("z_swap_x", "z ↔ x", (457, 671, 565, 775), "35", "LLLHL"),
-    operation("z_copy_xy", "z, x/y ↓", (566, 671, 675, 775), "37", "LLLLL"),
+    operation("z_copy_xy", "z ↓ xy", (566, 671, 675, 775), "37", "LLLLL"),
     operation("y_swap_x", "y ↔ x", (457, 779, 565, 884), "25", "LHLHL"),
-    operation("x_copy_y", "x/y ↓", (566, 779, 675, 884), "27", "LHLLL"),
+    operation("x_copy_y", "x ↓ y ", (566, 779, 675, 884), "27", "LHLLL"),
 
     # Arithmetic, register, module and plug-in keys.
     operation("clear_x", "CLEAR x", (781, 360, 890, 461), "26", "LHLLH"),
     operation("clear_xyz", "CLEAR x y z", (892, 360, 1002, 461), "36", "LLLLH"),
     operation("sqrt_x", "√x", (1005, 360, 1116, 461), "05", "HHLHL"),
-    operation("one_over_x_y", "1/x, y ↓", (781, 462, 890, 563), "20", "LHHHH"),
-    operation("n_x_y", "N x/y ↓", (892, 462, 1002, 563), "22", "LHHLH"),
+    operation("one_shift_xy", "1 ↓ xy ", (781, 462, 890, 563), "20", "LHHHH"),
+    operation("n_shift_xy", "N ↓ xy ", (892, 462, 1002, 563), "22", "LHHLH"),
     operation("divide", "÷", (1005, 462, 1116, 563), "16", "HLLLH"),
     operation("ten_x", "10x", (781, 565, 890, 667), "11", "HLHHL"),
     operation("x_over_ten", "x/10", (892, 565, 1002, 667), "34", "LLLHH"),
-    operation("multiply", "×", (1005, 565, 1116, 667), "17", "HLLLL"),
+    operation("multiply", "x", (1005, 565, 1116, 667), "17", "HLLLL"),
     operation("module_a", "MODULE A", (781, 670, 890, 775), "02", "HHHLH"),
     operation("module_b", "MODULE B", (781, 779, 890, 884), "06", "HHLLH"),
     operation("plugin", "PLUG-IN", (892, 670, 1002, 884), "03", "HHHLL"),
-    operation("subtract", "−", (1005, 670, 1116, 775), "13", "HLHLL"),
+    operation("subtract", "-", (1005, 670, 1116, 775), "13", "HLHLL"),
     operation("add", "+", (1005, 779, 1116, 884), "12", "HLHLH"),
 
     # Numeric keypad. KD is the manual's active-level pattern in D,C,B,A order.
@@ -148,9 +146,10 @@ for label, key_id, box, kd, exponent, exponent_label in NUMBERS:
     ))
 
 
-def serial_packet(key: Key) -> dict[str, Any]:
-    """Return the default newline-delimited Arduino command object."""
-    return {"key": key.key_id, "label": key.label, **key.data}
+def serial_packet(key: Key) -> str:
+    """Return the key ID that on_click() encodes as a JSON string."""
+    # return {"key": key.key_id, "label": key.label, **key.data}
+    return f"{key.key_id}"
 
 
 class KeyboardUI:
@@ -277,7 +276,8 @@ class KeyboardUI:
         self.last_event.set(payload)
         if self.serial_port is not None:
             try:
-                self.serial_port.write((payload + "\n").encode("utf-8"))
+                self.serial_port.write((key.key_id + "\n").encode("utf-8"))
+                print((key.key_id + "\n"))
                 self.status.set(f"Sent {key.label} to {self.serial_port.port}")
             except Exception as exc:
                 self.status.set(f"Serial write failed: {exc}")

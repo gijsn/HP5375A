@@ -4,6 +4,25 @@
 
 // put the counter to EXT to make the keyboard work
 
+bool opcode_ext(uint8_t opcode);
+bool opcode_load(uint8_t opcode);
+void set_opcode(uint8_t opcode);
+void prepare_ext_value(char* input);
+void swap(uint8_t* reg);
+void module(bool a);
+
+void enter_minus();
+void enter_decimal_point();
+void load(uint8_t digit);
+void enter_keyboard_digit(uint8_t digit);
+void enter_keyboard_exponent(char exponent);
+void print_vals(uint8_t val1[], uint8_t recv1[]);
+void wait_for_input();
+void parse_input();
+bool external_module_enabled();
+bool mainframe_reset();
+void step(uint8_t opcode);
+
 #define OUTPUT_OC 0x0
 /* Operation codes */
 enum _opcodes {
@@ -17,26 +36,26 @@ enum _opcodes {
     TEN_X = 9,          // works
     ADD = 10,           // works
     SUBTRACT = 11,      // works
-    ONE_DIV_X = 12,
+    ONE_OVER_X = 12,
     LOAD = 13,          // works
     DIVIDE = 14,        // works
     MULTIPLY = 15,      // works
     SWAP_SQS_X = 16,
     SWAP_INT_X = 17,
     MOVE_SQS_X_Y = 18,
-    MOVE_INT_X_Y = 19,
+    INT_COPY_X_Y = 19,
     TWO_X = 20,
-    SWAP_X_Y = 21,      // works
+    Y_SWAP_X = 21,      // works
     CLEAR_X = 22,       // works
-    COPY_X_Y = 23,      // works
-    SWAP_PI_X = 24,     //
-    SWAP_EXT_X = 25,    // works
+    X_COPY_Y = 23,      // works
+    PI_SWAP_X = 24,     //
+    EXT_SWAP_X = 25,    // works
     MOVE_PI_X_Y = 26,   //
-    MOVE_EXT_X_Y = 27,  // works
-    DIVIDE_X_10 = 28,   // works
-    SWAP_Z_X = 29,
+    EXT_COPY_X_Y = 27,  // works
+    X_DIVIDE_10 = 28,   // works
+    Z_SWAP_X = 29,
     CLEAR_XYZ = 30,     // works
-    MOVE_Z_X_Y = 31,
+    Z_COPY_XY = 31,
 
 };
 
@@ -81,7 +100,7 @@ uint8_t EXT_PROG_C_EXTRA = 8;
 enum _pins {
     DEBUG_PIN = 2,
     _LOAD_E_KB = 22,  // pin 1, next load number on KD-lines is exponent
-    // used in commands SWAP_EXT_X and MOVE_EXT_X_Y
+    // used in commands EXT_SWAP_X and EXT_COPY_X_Y
     // these pins are purposefully set to A0-A3 as they are the first 4 pins of port-F, which is used to send the 13 digit number to the counter.
     _SQ1 = A0,       // pin 2, BCD line 1, b register (KB) to x register (Counter)
     _SQ2 = A1,       // pin 3, BCD line 2, b register (KB) to x register (Counter)
@@ -113,9 +132,9 @@ enum _pins {
     EXT_STEP_COMPL = 19,      // pin 25, counter is ready to accept commands again.
     _SW_RST = X,              // pin 26, active low, reset the counter from keyboard
     EXT_CLK = 18,             // pin 27, Clock to be used, 1MHz with 50% duty cycle
-    _EXT_STORE = X,           // pin 30, low by counter when executing SWAP_EXT_X or MOVE_EXT_X_Y,
+    _EXT_STORE = X,           // pin 30, low by counter when executing EXT_SWAP_X or EXT_COPY_X_Y,
     _PRESET_SIGN_X_NEG = 32,  // pin 31, negative pulse will set the sign of the x-register mantissa to a negative value
-    // used in operations SWAP_EXT_X and MOVE_EXT_X_Y, SHIFT_13_EXT pulse train
+    // used in operations EXT_SWAP_X and EXT_COPY_X_Y, SHIFT_13_EXT pulse train
     EXT_S1 = A8,           // pin 32
     EXT_S2 = A9,
     EXT_S4 = A10,
@@ -132,45 +151,95 @@ typedef struct {
     uint8_t mode;
 } IOpins_t;
 
-// typedef struct {
-//     uint8_t opcode;
-//     char* name;
-// } Opcode_t;
+typedef struct {
+    const char* name;
+    void (*func)(uint8_t opcode, void* arg);
+    uint8_t opcode;
+    void* arg;
+} Opcode_t;
 
-// #define NO_OPCODES 31
+#define NO_OPERATIONS 47
 
-// Opcode_t opc[NO_OPCODES] = {
-//     {NORMALIZE, "NORMALIZE"},
-//     {MODULE, "MODULE"},
-//     {PLUG_IN, "PLUG_IN"},
-//     {SQRT_X, "SQRT_X"},
-//     {SELF_CHECK, "SELF_CHECK"},
-//     {CALIBRATE, "CALIBRATE"},
-//     {DISP, "DISP"},
-//     {TEN_X, "TEN_X"},
-//     {ADD, "ADD"},
-//     {SUBTRACT, "SUBTRACT"},
-//     {ONE_DIV_X, "ONE_DIV_X"},
-//     {LOAD, "LOAD"},
-//     {DIVIDE, "DIVIDE"},
-//     {MULTIPLY, "MULTIPLY"},
-//     {SWAP_SQS_X, "SWAP_SQS_X"},
-//     {SWAP_INT_X, "SWAP_INT_X"},
-//     {MOVE_SQS_X_Y, "MOVE_SQS_X_Y"},
-//     {MOVE_INT_X_Y, "MOVE_INT_X_Y"},
-//     {TWO_X, "TWO_X"},
-//     {SWAP_X_Y, "SWAP_X_Y"},
-//     {CLEAR_X, "CLEAR_X"},
-//     {MOVE_X_Y, "MOVE_X_Y"},
-//     {SWAP_PI_X, "SWAP_PI_X"},
-//     {SWAP_EXT_X, "SWAP_EXT_X"},
-//     {MOVE_PI_X_Y, "MOVE_PI_X_Y"},
-//     {MOVE_EXT_X_Y, "MOVE_EXT_X_Y"},
-//     {DIVIDE_X_10, "DIVIDE_X_10"},
-//     {SWAP_Z_X, "SWAP_Z_X"},
-//     {CLEAR_XYZ, "CLEAR XYZ"},
-//     {MOVE_Z_X_Y, "MOVE_Z_X_Y"},
-// };
+void run_step(uint8_t opcode, void*) {
+    step(opcode);
+}
+
+void run_module(uint8_t, void* arg) {
+    if (static_cast<bool>(arg)) {
+        digitalWriteFast(REMOTE_AB, HIGH);
+    }
+    step(MODULE);
+    digitalWriteFast(REMOTE_AB, LOW);
+}
+
+void run_plugin(uint8_t, void*) {
+    // plugin();
+}
+
+void run_load(uint8_t, void* arg) {
+    load(static_cast<uint8_t>(reinterpret_cast<uintptr_t>(arg)));
+}
+
+void run_ext_swap(uint8_t, void* arg) {
+    // swap(static_cast<uint8_t*>(arg));
+}
+
+uint8_t ext_value[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
+uint8_t ext_recv[13] = {0};
+
+uint8_t register_a[13];
+uint8_t register_b[13];
+uint8_t register_c[13];
+
+Opcode_t operations[NO_OPERATIONS] = {
+    {"norm", NULL, NORMALIZE},
+    {"module_a", run_module, MODULE, (void*)true},
+    {"module_b", run_module, MODULE},
+    {"plugin", run_plugin, PLUG_IN},
+    {"sqrt_x", run_step, SQRT_X},
+    {"self_check", NULL, SELF_CHECK},
+    {"calibrate", NULL, CALIBRATE},
+    {"display_x", run_step, DISP},
+    {"ten_x", run_step, TEN_X},
+    {"add", run_step, ADD},
+    {"subtract", run_step, SUBTRACT},
+    {"one_over_x", run_step, ONE_OVER_X},
+    {"enter_minus", run_load, LOAD, (void*)11},   // 11 indicates negative
+    {"enter_prefix", run_load, LOAD, (void*)10},  // 10 indicates exponent prefix
+    {"clear_entry", run_step, Y_SWAP_X},
+    {"digit_0", run_load, LOAD, (void*)0},
+    {"digit_1", run_load, LOAD, (void*)1},
+    {"digit_2", run_load, LOAD, (void*)2},
+    {"digit_3", run_load, LOAD, (void*)3},
+    {"digit_4", run_load, LOAD, (void*)4},
+    {"digit_5", run_load, LOAD, (void*)5},
+    {"digit_6", run_load, LOAD, (void*)6},
+    {"digit_7", run_load, LOAD, (void*)7},
+    {"digit_8", run_load, LOAD, (void*)8},
+    {"digit_9", run_load, LOAD, (void*)9},
+    {"decimal_point", run_load, LOAD, (void*)12},  // 12 indicates decimal point
+    {"divide", run_step, DIVIDE},
+    {"multiply", run_step, MULTIPLY},
+    {"SWAP_SQS_X", NULL, SWAP_SQS_X},
+    {"SWAP_INT_X", NULL, SWAP_INT_X},
+    {"MOVE_SQS_X_Y", NULL, MOVE_SQS_X_Y},
+    {"TWO_X", NULL, TWO_X},
+    {"y_swap_x", run_step, Y_SWAP_X},
+    {"clear_x", run_step, CLEAR_X},
+    {"x_copy_y", run_step, X_COPY_Y},
+    {"pi_swap_x", NULL, PI_SWAP_X},
+    {"a_swap_x", run_ext_swap, EXT_SWAP_X, (void*)register_a},
+    {"b_swap_x", run_ext_swap, EXT_SWAP_X, (void*)register_b},
+    {"c_swap_x", run_ext_swap, EXT_SWAP_X, (void*)register_c},
+    {"pi_move_x", NULL, MOVE_PI_X_Y},
+    {"a_copy_xy", run_ext_swap, INT_COPY_X_Y, (void*)register_a},
+    {"b_copy_xy", run_ext_swap, EXT_COPY_X_Y, (void*)register_b},
+    {"c_copy_xy", run_ext_swap, EXT_COPY_X_Y, (void*)register_c},
+    {"x_over_ten", run_step, X_DIVIDE_10},
+    {"z_swap_x", run_step, Z_SWAP_X},
+    {"clear_xyz", run_step, CLEAR_XYZ},
+    {"z_copy_xy", run_step, Z_COPY_XY},
+};
 
 #define NO_PINS 39
 IOpins_t pin[NO_PINS] = {
@@ -214,24 +283,7 @@ IOpins_t pin[NO_PINS] = {
     {_PI_ERROR_DEFEAT, INPUT},
     {_DIRTY_ZEROS, INPUT}};
 
-bool opcode_ext(uint8_t opcode);
-bool opcode_load(uint8_t opcode);
-void set_opcode(uint8_t opcode);
-void prepare_ext_value(char* input);
-void enter_minus();
-void enter_dot();
-void enter_keyboard_digit(uint8_t digit);
-void enter_keyboard_exponent(char exponent);
-void print_vals(uint8_t val1[], uint8_t recv1[]);
-void wait_for_input();
-
-bool external_module_enabled();
-bool mainframe_reset();
-void step(uint8_t opcode);
-
-uint8_t ext_value[13] = {1, 0, 2, 0, 3, 0, 4, 0, 5, 6, 9, 12, 5};
-// length needs to be 1 longer for correct loading, is corrected later
-uint8_t ext_recv[14] = {0};
+#define REGISTER_LEN 13
 
 uint8_t digits_in_load_seq = 0;
 
@@ -269,6 +321,8 @@ void setup() {
     int i = 0;
     delay(1);
     while (true) {
+        parse_input();
+        continue;
         // works
         Serial.println("CLEAR_XYZ");
         step(CLEAR_XYZ);
@@ -278,20 +332,20 @@ void setup() {
         // step(MODULE);
 
         // works
-        // step(SWAP_X_Y);
+        // step(Y_SWAP_X);
 
         // works with parser
         // seems decimal point is 1 position to the left in real life
         // Serial.println("prepare_ext_value -1.35e0 & display");
         // wait_for_input();
         // prepare_ext_value("-12.3456789e1");
-        // step(SWAP_EXT_X);
+        // step(EXT_SWAP_X);
         // step(DISP);
         // wait_for_input();
 
         // does not work
         // prepare_ext_value("7.00e1");
-        // step(MOVE_EXT_X_Y);
+        // step(EXT_COPY_X_Y);
         // step(DISP);
         // wait_for_input();
         // digitalWriteFast(REMOTE_AB, LOW);
@@ -306,19 +360,19 @@ void setup() {
         // prepare_ext_value("-17.101010101e3");
         // prepare_ext_value("-17.111111111e3");
         // prepare_ext_value("80.0e0");
-        // step(SWAP_EXT_X);
-        // step(MOVE_EXT_X_Y);
+        // step(EXT_SWAP_X);
+        // step(EXT_COPY_X_Y);
         // step(DISP);
         // wait_for_input();
 
-        // Serial.println("prepare 8");
-        // prepare_ext_value("-18.101010101e6");
-        // prepare_ext_value("-18.111111111e3");
-        // prepare_ext_value("20.0e0");
-        // step(SWAP_EXT_X);
-        // step(MOVE_EXT_X_Y);
-        // step(DISP);
-        // wait_for_input();
+        Serial.println("prepare 8");
+        prepare_ext_value("-18.101010101e6");
+        prepare_ext_value("-18.111111111e3");
+        prepare_ext_value("20.0e0");
+        step(EXT_SWAP_X);
+        // step(EXT_COPY_X_Y);
+        step(DISP);
+        wait_for_input();
 
         // arithmetic in counter
         // step(ADD);  // works Y + X
@@ -327,24 +381,24 @@ void setup() {
         // step(TEN_X); // works
         // step(MULTIPLY);  // works
         // step(DIVIDE);  // works
-        // step(DIVIDE_X_10); //works
-        // step(COPY_X_Y);  // works?
+        // step(X_DIVIDE_10); //works
+        // step(X_COPY_Y);  // works?
         // step(DISP);
         // wait_for_input();
 
-        // step(SWAP_X_Y);  // works
-        // step(DISP);
-        // wait_for_input();
-
-        // does not work
-        // step(SWAP_INT_X);
-        // step(DISP);
-        // wait_for_input();
+        step(Y_SWAP_X);  // works
+        step(DISP);
+        wait_for_input();
 
         // does not work
         // step(SWAP_INT_X);
         // step(DISP);
         // wait_for_input();
+
+        // does not work
+        step(Y_SWAP_X);  // works
+        step(DISP);
+        wait_for_input();
 
         // this works
         // Serial.println("TEN_X");
@@ -352,38 +406,18 @@ void setup() {
         // step(DISP);
         // wait_for_input();
 
-        // step(SWAP_X_Y);
+        // step(Y_SWAP_X);
         // step(DISP);
         // wait_for_input();
-
-        // this does not work?
-        //  Serial.println("DIVIDE_TEN_X");
-        //  step(DIVIDE_X_10);
-        //  step(DISP);
-        //  wait_for_input();
 
         // this works
         // Serial.println("ADD");
-        // step(ONE_DIV_X);
+        // step(ONE_OVER_X);
         // step(DISP);
         // wait_for_input();
 
-        // this does something?
-        // Serial.println("DIVIDE");
-        // step(DIVIDE);
-        // step(DISP);
-
-        // this results in error
-        // step(SQRT_X);
-        // step(DISP);
-        // wait_for_input();
-
-        // does not work
-        // wait_for_input();
-        // wait_for_input();
-        // enter_minus();
         Serial.println("enter_keyboard_digit 2");
-        enter_dot();
+        enter_decimal_point();
         wait_for_input();
         for (int i = 0; i < 3; i++) {
             enter_keyboard_digit(i);
@@ -423,8 +457,8 @@ bool opcode_load(uint8_t opcode) {
 
 bool opcode_ext(uint8_t opcode) {
     switch (opcode) {
-        case SWAP_EXT_X:
-        case MOVE_EXT_X_Y:
+        case EXT_SWAP_X:
+        case EXT_COPY_X_Y:
             return true;
     }
     return false;
@@ -470,11 +504,81 @@ void set_opcode(uint8_t opcode) {
     Serial.println();
 }
 
-void enter_keyboard_exponent(char digit) {
-    if (digits_in_load_seq == 0) {
-        Serial.println("No digits entered before exponent");
+/* Handle all loading instructions
+If needed, 'enter minus' needs to be called first to negate the loaded value
+Then, enter any amount of digits, can start with a . (will enter 0. to the counter)
+Close loading with an exponent, even if no exponent is required. This will set the value in the X-register and display the value formatted
+
+*/
+
+bool enter_exponent = false;
+
+void exit_load() {
+    enter_exponent = false;
+    digits_in_load_seq = 0;
+}
+void load(uint8_t digit) {
+    if (digit == 10) {
+        enter_exponent = true;
+        if (digits_in_load_seq == 0) {
+            step(LOAD);
+        }
+        return;
+    } else if (digit == 11) {
+        // enter minus
+        enter_minus();
+        return;
+    } else if (digit == 12) {
+        enter_decimal_point();
+        return;
+    } else if (digit > 12) {
+        Serial.println("Invalid digit");
         return;
     }
+
+    if (enter_exponent) {
+        char exponent;
+        switch (digit) {
+            case 0:
+                exponent = '0';
+                break;
+            case 1:
+                exponent = 'p';
+                break;
+            case 2:
+                exponent = 'f';
+                break;
+            case 3:
+                exponent = 'T';
+                break;
+            case 4:
+                exponent = 'm';
+                break;
+            case 5:
+                exponent = 'u';
+                break;
+            case 6:
+                exponent = 'n';
+                break;
+            case 7:
+                exponent = 'k';
+                break;
+            case 8:
+                exponent = 'M';
+                break;
+            case 9:
+                exponent = 'G';
+                break;
+        }
+        enter_keyboard_exponent(exponent);
+        enter_exponent = false;
+        // finalize loading
+        return;
+    }
+    enter_keyboard_digit(digit);
+}
+
+void enter_keyboard_exponent(char digit) {
     bool sign = true;
     switch (digit) {
         case 'T':
@@ -585,13 +689,13 @@ void enter_minus() {
 }
 /* Need a low pulse on _PRESET_SIGN_X_NEG during a LOAD operation with 0 on KD
  */
-void enter_dot() {
+void enter_decimal_point() {
     if (digits_in_load_seq == 0) {
-        // first digit, so load the decimal point
+        // first digit, so load a 0 before decimal point latch
         enter_keyboard_digit(0);
     }
     digitalWriteFast(_DP_LATCH, LOW);
-    // DP lines are not taken?
+    // TODO: DP lines are not taken?
     digitalWriteFast(DP1, HIGH);
     digitalWriteFast(_DP2, HIGH);
     digitalWriteFast(_DP4, HIGH);
@@ -603,8 +707,6 @@ void enter_keyboard_digit(uint8_t digit) {
     pinModeFast(_KD2, OUTPUT);
     pinModeFast(_KD4, OUTPUT);
     pinModeFast(_KD8, OUTPUT);
-    // digitalWriteFast(_DEFEAT_HOLD, LOW);
-    //  digitalWriteFast(_DP_LATCH, HIGH);
     //  -8421BCD
     if ((digit & 1)) {
         digitalWriteFast(_KD1, LOW);
@@ -857,6 +959,30 @@ void select_module_input(bool A) {
         digitalWriteFast(REMOTE_AB, HIGH);
     }
 }
+char input[256];
+
+void parse_input() {
+    while (Serial.available() == 0) {
+        delay(1);
+    }
+    size_t input_length = Serial.readBytesUntil('\n', input, sizeof(input) - 1);
+    input[input_length] = '\0';
+    if (input_length > 0 && input[input_length - 1] == '\r') {
+        input[--input_length] = '\0';
+    }
+    for (int i = 0; i < NO_OPERATIONS; i++) {
+        if (strcmp(operations[i].name, input) == 0) {
+            if (operations[i].func != NULL) {
+                operations[i].func(operations[i].opcode, operations[i].arg);
+            } else {
+                Serial.println("Operation has no handler");
+            }
+            return;
+        }
+    }
+    Serial.println("Unknown operation");
+}
+
 void wait_for_input() {
     while (Serial.available() == 0) {
         delay(1);
